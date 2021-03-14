@@ -34,7 +34,7 @@ cp libdrawstuff.* ../lib
 ```
 
 Here are instructions for building the Tomm-I simulation code. 
-n.b. make sure you ODE_HOME environment variable is set to point
+n.b. make sure your ODE_HOME environment variable is set to point
 to your ODE library build. 
 ```
 git clone faustus123/Tomm-I
@@ -45,8 +45,11 @@ cmake ..
 ```
 
 Finally, to run the simulation, do the following. Note this assumes
-you are still in the build directory
+you are still in the build directory.
 ```
 ./Tomm-I-sim -texturepath $ODE_HOME/drawstuff/textures
 (hit command-Q to quit)
 ```
+If you don't want to have to type in the "-texturepath ..." arguments
+every time then edit the texturepath.h file and recompile with the
+full path to the directory in your ODE build.
