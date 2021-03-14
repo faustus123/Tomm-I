@@ -21,7 +21,7 @@
  *************************************************************************/
 
 #ifndef DRAWSTUFF_TEXTURE_PATH
-#define DRAWSTUFF_TEXTURE_PATH "/Users/davidl/David/Tomm-I/Software/Tomm-I/drawstuff/textures"
+#define DRAWSTUFF_TEXTURE_PATH "/Users/davidl/David/Tomm-I/Software/ODE/ode-0.16.2/drawstuff/textures"
 //#define DRAWSTUFF_TEXTURE_PATH "./drawstuff/textures"
 #endif
 
