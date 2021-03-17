@@ -1,5 +1,7 @@
 
 #include <ode/ode.h>
+#include <vector>
+#include <iostream>
 
 class Leg {
 public:
@@ -9,6 +11,9 @@ public:
         hipID   = dBodyCreate(worldID);
         thighID = dBodyCreate(worldID);
         footID  = dBodyCreate(worldID);
+        all_bodies.push_back( hipID );
+        all_bodies.push_back( thighID );
+        all_bodies.push_back( footID );
 
         // Create shape objects for each of the bodies
         hipGeomID   = dCreateCapsule( spaceID, radius, len_hip   );
@@ -69,13 +74,19 @@ public:
         dGeomSetQuaternion(footGeomID,  Qfoot);
 
         // Attach bones
-        dReal Xjoint = Xhip + len_tot_hip/2.0;
+        dReal Xjoint = Xhip + len_tot_hip/2.0 - (len_hip-dist_hip_thigh_axis);
         joint_hip_thigh = dJointCreateDHinge(worldID, 0);
         dJointAttach(joint_hip_thigh, hipID, thighID);
         dJointSetDHingeAxis(joint_hip_thigh, 0, 1, 0);
         dJointSetDHingeAnchor1(joint_hip_thigh, Xjoint, 0, height_hip);
         dJointSetDHingeAnchor2(joint_hip_thigh, Xjoint, 0, height_hip);
 
+        Xjoint = Xthigh + len_tot_hip/2.0 + len_tot_thigh*sin(angleZ_thigh*deg2rad)/2.0;;
+        joint_thigh_foot = dJointCreateDHinge(worldID, 0);
+        dJointAttach(joint_thigh_foot, thighID, footID);
+        dJointSetDHingeAxis(joint_thigh_foot, 0, 1, 0);
+        dJointSetDHingeAnchor1(joint_thigh_foot, Xjoint, 0, height_foot);
+        dJointSetDHingeAnchor2(joint_thigh_foot, Xjoint, 0, height_foot);
     }
 
     //-------------------------------------------------
@@ -83,10 +94,38 @@ public:
     //
     // Move the entire leg relative to its current position
     void MoveRelative(dReal dX, dReal dY, dReal dZ){
-        dBodyID bodies[] = {hipID, thighID, footID};
-        for( auto bID : bodies ){
+        for( auto bID : all_bodies ){
             auto *pos = dBodyGetPosition( bID );
             dBodySetPosition( bID, pos[0]+dX, pos[1]+dY, pos[2]+dZ);
+        }
+    }
+
+    //-------------------------------------------------
+    // Mirror
+    //
+    // Mirror all bones about the specified axis.
+    // 0=x-axis, 1=y-axis, 2=z-axis
+    void Mirror(int axis){
+
+        for( auto bID : all_bodies ) {
+            auto pos = dBodyGetPosition(bID);
+            dReal new_pos[3];
+            for (int i = 0; i < 3; i++) new_pos[i] = pos[i];
+            new_pos[axis] = -new_pos[axis];
+            dBodySetPosition(bID, new_pos[0], new_pos[1], new_pos[2]);
+
+            // Rotate body 180 degrees about z-axis.
+            // This turns out to be equivalent to reversing the sign
+            // of the top two rows of the rotation matrix
+            auto q = dBodyGetQuaternion(bID);
+            dMatrix3 rot;
+            dRfromQ( rot, q );
+            for(int i=0; i<3; i++){
+                for(int j=0; j<2; j++){
+                    rot[j*4+i] = - rot[j*4+i];
+                }
+            }
+            dBodySetRotation(bID, rot);
         }
     }
 
@@ -99,6 +138,7 @@ public:
 
         // TODO:  Write this
     }
+
 
     virtual ~Leg(){}
 
@@ -129,5 +169,7 @@ public:
     // Angles of joints in degrees
     dReal theta_hip   = 120.0;
     dReal theta_ankle = 130.0;
+
+    std::vector<dBodyID> all_bodies;
 };
 
