@@ -1,24 +1,17 @@
-/*************************************************************************
- *                                                                       *
- * Open Dynamics Engine, Copyright (C) 2001,2002 Russell L. Smith.       *
- * All rights reserved.  Email: russ@q12.org   Web: www.q12.org          *
- *                                                                       *
- * This library is free software; you can redistribute it and/or         *
- * modify it under the terms of EITHER:                                  *
- *   (1) The GNU Lesser General Public License as published by the Free  *
- *       Software Foundation; either version 2.1 of the License, or (at  *
- *       your option) any later version. The text of the GNU Lesser      *
- *       General Public License is included with this library in the     *
- *       file LICENSE.TXT.                                               *
- *   (2) The BSD-style license that is included with this library in     *
- *       the file LICENSE-BSD.TXT.                                       *
- *                                                                       *
- * This library is distributed in the hope that it will be useful,       *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the files    *
- * LICENSE.TXT and LICENSE-BSD.TXT for more details.                     *
- *                                                                       *
- *************************************************************************/
+//
+// Tomm-I-sim
+//
+// This is a simulation of the Tomm-I quadraped robot. It is
+// used for training model to make the robot walk.
+//
+// This used the Open Dynamics Engine (ODE) library for modeling
+// the physics.
+//
+// Full source and instructions for building this (and ODE) can
+// be found on github here:
+//
+//   https://github.com/faustus123/Tomm-I/tree/main/Tomm-I-sim
+//
 
 #include <assert.h>
 
@@ -33,7 +26,8 @@
 #define dsDrawCapsule dsDrawCapsuleD
 #endif
 
-#include "Leg.h"
+#include "RobotGeom.h"
+RobotGeom *robotgeom = nullptr;
 
 dWorldID world;
 dSpaceID space;
@@ -48,25 +42,14 @@ void start()
     dWorldSetGravity (world,0,0,-9.8);
 
     dWorldSetDamping(world, 1e-4, 1e-5);
-    dWorldSetERP(world, 0.001);
+    dWorldSetERP(world, 0.2);
 
     contactgroup = dJointGroupCreate (0);
 
     space = dSimpleSpaceCreate (0);
     groundID = dCreatePlane (space,0,0,1,0);
 
-    Leg FL(world, space);
-    Leg BL(world, space);
-    Leg FR(world, space);
-    Leg BR(world, space);
-
-    FL.MoveRelative(0.02,0.13, 0.0);
-    BL.Mirror(0);
-    BL.MoveRelative(-0.02,0.13, 0.0);
-    FR.MoveRelative(0.02,-0.13, 0.0);
-    BR.Mirror(0);
-    BR.MoveRelative(-0.02,-0.13, 0.0);
-
+    robotgeom = new RobotGeom(world, space);
 
     // initial camera position
     static float xyz[3] = {0.0, -0.7, 0.5};
@@ -107,7 +90,8 @@ void drawGeom(dGeomID g)
                 dsSetColor(1, .5, 0);
             else
                 dsSetColor(1, 1, 0);
-            dsSetTexture (DS_WOOD);
+//            dsSetTexture (DS_WOOD);
+            dsSetColor(1, 0.65, 0);
             dGeomCapsuleGetParams(g, &radius, &length);
             dsDrawCapsule(pos, rot, length, radius);
             break;
@@ -147,14 +131,14 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
         for (int i=0; i<n; i++)
         {
             // make all contact have no slippage (infinite friction)
-            contact[i].surface.mode = 0;
-            contact[i].surface.mu = dInfinity;
-//            contact[i].surface.slip1 = 0.7;
-//            contact[i].surface.slip2 = 0.7;
-//            contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactSlip1 | dContactSlip2;
-//            contact[i].surface.mu = dInfinity; // was: 500.0
-//            contact[i].surface.soft_erp = 0.50;
-//            contact[i].surface.soft_cfm = 0.03;
+//            contact[i].surface.mode = 0;
+//            contact[i].surface.mu = dInfinity;
+            contact[i].surface.slip1 = 0.7;
+            contact[i].surface.slip2 = 0.7;
+            contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactSlip1 | dContactSlip2;
+            contact[i].surface.mu = 500.0;
+            contact[i].surface.soft_erp = 0.50;
+            contact[i].surface.soft_cfm = 0.03;
             dJointID c = dJointCreateContact (world,contactgroup,&contact[i]);
             dJointAttach
                     (
@@ -169,8 +153,6 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
 void simLoop(int pause)
 {
     if (!pause) {
-
-//        static dReal t = 0;
 
         const dReal step = 0.005; // seconds/step
         const unsigned nsteps = 2; // number of steps to take for each frame drawn
@@ -197,7 +179,7 @@ void simLoop(int pause)
 
             dSpaceCollide (space,0,&nearCallback);
             dWorldQuickStep(world, step);
-            //dWorldStep(world, step);
+//            dWorldStep(world, step);
             dJointGroupEmpty (contactgroup);
         }
     }
@@ -209,6 +191,8 @@ void simLoop(int pause)
 
         drawGeom(g);
     }
+
+    robotgeom->DrawHingeLines();
 }
 
 
