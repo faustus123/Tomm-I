@@ -9,8 +9,11 @@ if(APPLE AND OPENGL_FOUND)
     set(HAVE_APPLE_OPENGL_FRAMEWORK ON)
 endif()
 
-set(ODE_HOME /Users/davidl/David/Tomm-I/Software/ODE/ode-0.16.2)
-#set(ODE_HOME /Users/davidl/builds/ODE/ode-0.16.2)
+if(DEFINED ENV{ODE_HOME})
+	set(ODE_HOME $ENV{ODE_HOME})
+else()
+	set(ODE_HOME /Users/davidl/David/Tomm-I/Software/ODE/ode-0.16.2)
+endif()
 message(STATUS "ODE_HOME: ${ODE_HOME}")
 
 
