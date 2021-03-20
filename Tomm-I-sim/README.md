@@ -42,6 +42,7 @@ cd Tomm-I/Tomm-I-sim
 mkdir build
 cd build
 cmake ..
+make -j4
 ```
 
 Finally, to run the simulation, do the following. Note this assumes
