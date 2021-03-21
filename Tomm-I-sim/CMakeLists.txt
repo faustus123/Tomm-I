@@ -19,6 +19,8 @@ message(STATUS "ODE_HOME: ${ODE_HOME}")
 
 set(SOURCE
         Tomm-I-sim.cc
+		action.hpp
+		action.cc
         )
 
 add_executable(Tomm-I-sim ${SOURCE})

@@ -14,6 +14,8 @@
 //
 
 #include <assert.h>
+#include <chrono>
+#include <thread>
 
 #include <ode/ode.h>
 #include <drawstuff/drawstuff.h>
@@ -26,6 +28,7 @@
 #define dsDrawCapsule dsDrawCapsuleD
 #endif
 
+#include "action.hpp"
 #include "RobotGeom.h"
 RobotGeom *robotgeom = nullptr;
 
@@ -39,10 +42,10 @@ bool applyForce = false;
 void start()
 {
     world = dWorldCreate();
-    dWorldSetGravity (world,0,0,-9.8);
+    dWorldSetGravity (world,0,0,-9.81);
 
-    dWorldSetDamping(world, 1e-4, 1e-5);
-    dWorldSetERP(world, 0.2);
+    dWorldSetDamping(world, 1e-4, 8e-3);
+    dWorldSetERP(world, 0.5);
 
     contactgroup = dJointGroupCreate (0);
 
@@ -50,10 +53,14 @@ void start()
     groundID = dCreatePlane (space,0,0,1,0);
 
     robotgeom = new RobotGeom(world, space);
+    robotgeom->SetPark(); // This is so the servos have an initial setting
+
+    SetupActions();
+    ScaleActions(10.0/17.0*23.0/17.5);
 
     // initial camera position
-    static float xyz[3] = {0.0, -0.7, 0.5};
-    static float hpr[3] = {90.0, -15.0, 0};
+    static float xyz[3] = {-0.05, +0.9, 0.10};
+    static float hpr[3] = {-86.0, +15.0, 0};
     dsSetViewpoint (xyz,hpr);
 }
 
@@ -133,12 +140,14 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
             // make all contact have no slippage (infinite friction)
 //            contact[i].surface.mode = 0;
 //            contact[i].surface.mu = dInfinity;
-            contact[i].surface.slip1 = 0.7;
-            contact[i].surface.slip2 = 0.7;
-            contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactSlip1 | dContactSlip2;
-            contact[i].surface.mu = 500.0;
+//            contact[i].surface.slip1 = 0.7;
+//            contact[i].surface.slip2 = 0.7;
+            contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactBounce;
+            contact[i].surface.mu = 0.07;
             contact[i].surface.soft_erp = 0.50;
             contact[i].surface.soft_cfm = 0.03;
+            contact[i].surface.bounce = 0.1;
+            contact[i].surface.bounce_vel = 0.001;
             dJointID c = dJointCreateContact (world,contactgroup,&contact[i]);
             dJointAttach
                     (
@@ -152,34 +161,16 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
 
 void simLoop(int pause)
 {
+    static dReal T = 0.0;
+    const dReal step = 0.017; // seconds/step
+    const unsigned nsteps = 1; // number of steps to take for each frame drawn
+
     if (!pause) {
 
-        const dReal step = 0.005; // seconds/step
-        const unsigned nsteps = 2; // number of steps to take for each frame drawn
-
         for (unsigned i=0; i<nsteps; ++i) {
-
-//            applyForce = fmodf(t, 3.) > 2.;
-
-//            if (applyForce) {
-//                dReal f = 0.3 * sin(t*1.2);
-//                dBodyAddForceAtRelPos(body1,
-//                                      f, 0, 0,
-//                                      0, 0, -0.5); // at the lower end
-//
-//                dReal g = 0.3 * sin(t*0.7);
-//                dBodyAddForceAtRelPos(body2,
-//                                      0, g, 0,
-//                                      0, 0, -0.5); // at the lower end
-//            }
-
-
-//            t += step;
-//            if (t > 20.) t = 0.;
-
             dSpaceCollide (space,0,&nearCallback);
-            dWorldQuickStep(world, step);
-//            dWorldStep(world, step);
+//            dWorldQuickStep(world, step);
+            dWorldStep(world, step);
             dJointGroupEmpty (contactgroup);
         }
     }
@@ -192,10 +183,45 @@ void simLoop(int pause)
         drawGeom(g);
     }
 
+    // Draw lines at hinge joints (for debugging)
     robotgeom->DrawHingeLines();
+
+    // Set all servo motors to the "standing" position
+
+    // Run all of the actions
+    // n.b. this assumes it is called about every 10ms
+    RunActions(robotgeom);
+
+//    if(T < 2.0)
+//        robotgeom->SetPark();
+//    else if( T < 4.0 )
+//        robotgeom->SetStand();
+//    else if( T < 8.0 )
+//        robotgeom->SetSit();
+//    else if( T < 15.0 )
+//        robotgeom->Shake(step);
+//    else if( T < 18.0 )
+//        robotgeom->SetLaydown();
+//    else
+//        robotgeom->Relax();
+////    std::cout << "T="<<T << std::endl;
+
+    // Run simulation in real time so it looks realistic
+    static auto next = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    if( next > now) {
+        _DBG_ << "sleeping ..." << std::endl;
+        std::this_thread::sleep_until(next);
+    }else {
+        auto tdiff = now-next;
+        _DBG_ << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(tdiff).count() << " ms too long!" << std::endl;
+        next = now;
+    }
+    uint32_t t_ms = step*nsteps*1000.0;
+    next += std::chrono::milliseconds(t_ms);
+
+    T += t_ms/1000.0;
 }
-
-
 
 int main(int argc, char **argv)
 {
