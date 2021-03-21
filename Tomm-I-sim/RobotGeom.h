@@ -359,6 +359,19 @@ public:
     }
 
     //-------------------------------------------------
+    // RefreshServos
+    //
+    // Set all servos based on last call to SetServoAngle.
+    // This is called at the end of each step in the simulation
+    // to mimic how the PWM + servos themselves keep track of
+    // their angle settings.
+    void RefreshServos(void) {
+        for( auto p : joints ) {
+            SetServoAngle(p.first, last_servo_setting[p.first]);
+        }
+    }
+
+    //-------------------------------------------------
     // SetStand
     //
     // Set all servos to the standing positons

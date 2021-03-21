@@ -37,8 +37,25 @@ dSpaceID space;
 dGeomID groundID;
 dJointGroupID contactgroup;
 
-bool applyForce = false;
+// The RUN_REAL_TIME flag tells the simulation to add some delay to loop
+// (if needed) to try and match the frame rate so that the simulation
+// runs more or less in real time. This can make it a little easier to visualize
+// if it is doing the right thing.
+// Note that this only works if the time spent simulating every step is less
+// than the frame rate. (e.g. step variable in simLoop needs to be large enough)
+bool RUN_REAL_TIME = true;
 
+// This flag tells the simulation to run the sequence of pre-programmed motions
+// defined in action.cc::SetupActions(). This should be set to false if trying
+// to run the simulation for other purposes.
+bool USE_PREPROGRAMED_ACTIONS = true;
+
+// Set this to false to skip drawing frames during the simulation
+bool USE_GRAPHICS = true;
+
+//-----------------------------------------------------
+// start
+//
 void start()
 {
     world = dWorldCreate();
@@ -61,16 +78,21 @@ void start()
     // initial camera position
     static float xyz[3] = {-0.05, +0.9, 0.10};
     static float hpr[3] = {-86.0, +15.0, 0};
-    dsSetViewpoint (xyz,hpr);
+    if( USE_GRAPHICS )dsSetViewpoint (xyz,hpr);
 }
 
+//-----------------------------------------------------
+// stop
+//
 void stop()
 {
     dSpaceDestroy(space);
     dWorldDestroy(world);
 }
 
-
+//-----------------------------------------------------
+// drawGeom
+//
 void drawGeom(dGeomID g)
 {
     int gclass = dGeomGetClass(g);
@@ -81,10 +103,7 @@ void drawGeom(dGeomID g)
         case dBoxClass:
         {
             dVector3 lengths;
-            if (applyForce)
-                dsSetColor(1, .5, 0);
-            else
-                dsSetColor(1, 1, 0);
+            dsSetColor(1, 1, 0);
             dsSetTexture (DS_WOOD);
             dGeomBoxGetLengths(g, lengths);
             dsDrawBox(pos, rot, lengths);
@@ -93,11 +112,7 @@ void drawGeom(dGeomID g)
         case dCapsuleClass:
         {
             dReal radius, length;
-            if (applyForce)
-                dsSetColor(1, .5, 0);
-            else
-                dsSetColor(1, 1, 0);
-//            dsSetTexture (DS_WOOD);
+            dsSetColor(1, 1, 0);
             dsSetColor(1, 0.65, 0);
             dGeomCapsuleGetParams(g, &radius, &length);
             dsDrawCapsule(pos, rot, length, radius);
@@ -108,9 +123,11 @@ void drawGeom(dGeomID g)
     }
 }
 
+//-----------------------------------------------------
+// nearCallback
+//
 // this is called by dSpaceCollide when two objects in space are
 // potentially colliding.
-
 static void nearCallback(void *data, dGeomID o1, dGeomID o2)
 {
     assert(o1);
@@ -137,11 +154,7 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
         // Looks like there was a collision. Loop over contact points found.
         for (int i=0; i<n; i++)
         {
-            // make all contact have no slippage (infinite friction)
-//            contact[i].surface.mode = 0;
-//            contact[i].surface.mu = dInfinity;
-//            contact[i].surface.slip1 = 0.7;
-//            contact[i].surface.slip2 = 0.7;
+            // Set surface contact parameters
             contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactBounce;
             contact[i].surface.mu = 0.07;
             contact[i].surface.soft_erp = 0.50;
@@ -159,6 +172,9 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
     }
 }
 
+//-----------------------------------------------------
+// simLoop
+//
 void simLoop(int pause)
 {
     static dReal T = 0.0;
@@ -169,60 +185,65 @@ void simLoop(int pause)
 
         for (unsigned i=0; i<nsteps; ++i) {
             dSpaceCollide (space,0,&nearCallback);
-//            dWorldQuickStep(world, step);
-            dWorldStep(world, step);
+            dWorldStep(world, step);  // n.b. dWorldQuickStep seems quite unstable so don't use it
             dJointGroupEmpty (contactgroup);
         }
     }
-    
-    // now we draw everything
-    unsigned ngeoms = dSpaceGetNumGeoms(space);
-    for (unsigned i=0; i<ngeoms; ++i) {
-        dGeomID g = dSpaceGetGeom(space, i);
-
-        drawGeom(g);
-    }
-
-    // Draw lines at hinge joints (for debugging)
-    robotgeom->DrawHingeLines();
-
-    // Set all servo motors to the "standing" position
 
     // Run all of the actions
-    // n.b. this assumes it is called about every 10ms
-    RunActions(robotgeom);
+    if( USE_PREPROGRAMED_ACTIONS ) RunActions(robotgeom);
 
-//    if(T < 2.0)
-//        robotgeom->SetPark();
-//    else if( T < 4.0 )
-//        robotgeom->SetStand();
-//    else if( T < 8.0 )
-//        robotgeom->SetSit();
-//    else if( T < 15.0 )
-//        robotgeom->Shake(step);
-//    else if( T < 18.0 )
-//        robotgeom->SetLaydown();
-//    else
-//        robotgeom->Relax();
-////    std::cout << "T="<<T << std::endl;
+    //-------------------------------------------------
+    // here is where we should place code to interact
+    // with the AI model. Inputs on the robot state
+    // can be obtained from the robotgeom object. Settings
+    // will also be provided to the robot via
+    // robotgeom->SetServoAngle(theta)
+    // where theta is in degrees.
+    //-------------------------------------------------
 
-    // Run simulation in real time so it looks realistic
-    static auto next = std::chrono::steady_clock::now();
-    auto now = std::chrono::steady_clock::now();
-    if( next > now) {
-        _DBG_ << "sleeping ..." << std::endl;
-        std::this_thread::sleep_until(next);
-    }else {
-        auto tdiff = now-next;
-        _DBG_ << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(tdiff).count() << " ms too long!" << std::endl;
-        next = now;
+    // Refresh all servos so ones that have not had their settings
+    // explicitly updated this step will still try and honor the
+    // last setting.
+    robotgeom->RefreshServos();
+
+    // now we draw everything
+    if( USE_GRAPHICS ) {
+        unsigned ngeoms = dSpaceGetNumGeoms(space);
+        for (unsigned i = 0; i < ngeoms; ++i) {
+            dGeomID g = dSpaceGetGeom(space, i);
+
+            drawGeom(g);
+        }
+
+        // Draw lines at hinge joints (for debugging)
+        robotgeom->DrawHingeLines();
     }
-    uint32_t t_ms = step*nsteps*1000.0;
-    next += std::chrono::milliseconds(t_ms);
 
-    T += t_ms/1000.0;
+    // Optionally add time delays so the simulation runs in real time
+    // so it looks realistic by eye.
+    if( RUN_REAL_TIME ) {
+        static auto next = std::chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
+        if (next > now) {
+            _DBG_ << "sleeping ..." << std::endl;
+            std::this_thread::sleep_until(next);
+        } else {
+            auto tdiff = now - next;
+            _DBG_ << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(tdiff).count() << " ms too long!"
+                  << std::endl;
+            next = now;
+        }
+        uint32_t t_ms = step * nsteps * 1000.0;
+        next += std::chrono::milliseconds(t_ms);
+
+        T += t_ms / 1000.0;
+    }
 }
 
+//-----------------------------------------------------
+// main
+//
 int main(int argc, char **argv)
 {
     // setup pointers to drawstuff callback functions

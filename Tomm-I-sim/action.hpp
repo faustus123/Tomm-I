@@ -242,14 +242,6 @@ public:
 
             // if( a->chanid==0 ) {Serial.print("Setting channel 0 to: "); Serial.println(angle);}
         }
-
-        // Here we need to explicitly set all of the servo motors based on their
-        // last setting. This was not needed in the arduino version because the
-        // PWM diver and servos themselves took care of this. The simulation must
-        // mimic the hardware here though.
-        for( auto p : chanid2name ){
-            robotgeom->SetServoAngle(p.second, robotgeom->last_servo_setting[p.second]);
-        }
     }
 };
 
