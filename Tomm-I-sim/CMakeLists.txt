@@ -41,18 +41,11 @@ target_link_libraries (Tomm-I-sim LINK_PUBLIC Tomm-I-simlib ode drawstuff ${OPEN
 # Tomm-I-sim python module
 add_subdirectory(extern/pybind11)
 pybind11_add_module(Tomm-I-sim_pymod pymod.cc)
-
 target_include_directories(Tomm-I-sim_pymod BEFORE PUBLIC ${PYTHON_INCLUDE_DIRS} ${PYBIND11_INCLUDE_DIR})
 target_link_libraries(Tomm-I-sim_pymod PUBLIC ${PYTHON_LIBRARIES} pybind11::embed)
 set_target_properties(Tomm-I-sim_pymod PROPERTIES PREFIX "" SUFFIX ".so" LIBRARY_OUTPUT_NAME "TommIsim")
 
-
+# Install
 install(TARGETS Tomm-I-sim DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 install(TARGETS Tomm-I-sim_pymod DESTINATION ${CMAKE_SOURCE_DIR}/python_modules)
-
-#
-#add_library(jana_python_module SHARED jana_module.cc)
-#
-#set_target_properties(jana_python_module PROPERTIES PREFIX "" SUFFIX ".so" LIBRARY_OUTPUT_NAME "jana")
-#install(TARGETS jana_python_module DESTINATION python)
 
