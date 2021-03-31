@@ -42,7 +42,8 @@ target_link_libraries (Tomm-I-sim LINK_PUBLIC Tomm-I-simlib ode drawstuff ${OPEN
 add_subdirectory(extern/pybind11)
 pybind11_add_module(Tomm-I-sim_pymod pymod.cc)
 target_include_directories(Tomm-I-sim_pymod BEFORE PUBLIC ${PYTHON_INCLUDE_DIRS} ${PYBIND11_INCLUDE_DIR})
-target_link_libraries(Tomm-I-sim_pymod PUBLIC ${PYTHON_LIBRARIES} pybind11::embed)
+target_link_directories(Tomm-I-sim_pymod BEFORE PUBLIC ${ODE_HOME}/lib)
+target_link_libraries(Tomm-I-sim_pymod PUBLIC Tomm-I-simlib ode drawstuff ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${PYTHON_LIBRARIES} pybind11::embed)
 set_target_properties(Tomm-I-sim_pymod PROPERTIES PREFIX "" SUFFIX ".so" LIBRARY_OUTPUT_NAME "TommIsim")
 
 # Install

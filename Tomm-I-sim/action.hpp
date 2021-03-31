@@ -62,7 +62,6 @@ public:
 
     ActionManager(){
 
-        _DBG__;
         // Setup map from servo chanid to joint name in RobotGeom
         chanid2name[FL1] ="FL_hip";
         chanid2name[FL2] ="FL_foot";
@@ -72,7 +71,6 @@ public:
         chanid2name[BL2] ="BL_foot";
         chanid2name[BR1] ="BR_hip";
         chanid2name[BR2] ="BR_foot";
-        _DBG__;
     }
 
     //-----------------------------------
