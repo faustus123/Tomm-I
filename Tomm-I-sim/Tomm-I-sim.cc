@@ -1,25 +1,14 @@
 //
-// Tomm-I-sim
-//
-// This is a simulation of the Tomm-I quadraped robot. It is
-// used for training model to make the robot walk.
-//
-// This used the Open Dynamics Engine (ODE) library for modeling
-// the physics.
-//
-// Full source and instructions for building this (and ODE) can
-// be found on github here:
-//
-//   https://github.com/faustus123/Tomm-I/tree/main/Tomm-I-sim
 //
 
 #include <assert.h>
 #include <chrono>
 #include <thread>
 
-#include <ode/ode.h>
-#include <drawstuff/drawstuff.h>
-#include "texturepath.h"
+#include "Tomm-I-sim.h"
+#include "action.hpp"
+#include "RobotGeom.h"
+RobotGeom *robotgeom = nullptr;
 
 #ifdef dDOUBLE
 #define dsDrawSphere dsDrawSphereD
@@ -27,10 +16,6 @@
 #define dsDrawLine dsDrawLineD
 #define dsDrawCapsule dsDrawCapsuleD
 #endif
-
-#include "action.hpp"
-#include "RobotGeom.h"
-RobotGeom *robotgeom = nullptr;
 
 dWorldID world;
 dSpaceID space;
@@ -54,9 +39,41 @@ bool USE_PREPROGRAMED_ACTIONS = true;
 bool USE_GRAPHICS = true;
 
 //-----------------------------------------------------
+// int TommI_SimulationSetupAndRun(int argc, char **argv) {
+//
+void TommI_SimulationSetupAndRun(int argc, char **argv) {
+    // setup pointers to drawstuff callback functions
+    dsFunctions fn;
+    fn.version = DS_VERSION;
+    fn.start = &start;
+    fn.step = &simLoop;
+    fn.command = 0;
+    fn.stop = stop;
+    fn.path_to_textures = DRAWSTUFF_TEXTURE_PATH;
+
+    // create world
+    dInitODE();
+
+    // run demo
+    dsSimulationLoop(argc, argv, 800, 600, &fn);
+}
+
+//-----------------------------------------------------
+// int TommI_SimulationSetupAndRun(int argc, char **argv) {
+//
+void TommI_SimulationCleanup(void)
+{
+    dJointGroupEmpty (contactgroup);
+    dJointGroupDestroy (contactgroup);
+    dSpaceDestroy (space);
+    dWorldDestroy (world);
+    dCloseODE();
+}
+
+//-----------------------------------------------------
 // start
 //
-void start()
+void start(void)
 {
     world = dWorldCreate();
     dWorldSetGravity (world,0,0,-9.81);
@@ -84,7 +101,7 @@ void start()
 //-----------------------------------------------------
 // stop
 //
-void stop()
+void stop(void)
 {
     dSpaceDestroy(space);
     dWorldDestroy(world);
@@ -241,30 +258,4 @@ void simLoop(int pause)
     }
 }
 
-//-----------------------------------------------------
-// main
-//
-int main(int argc, char **argv)
-{
-    // setup pointers to drawstuff callback functions
-    dsFunctions fn;
-    fn.version = DS_VERSION;
-    fn.start = &start;
-    fn.step = &simLoop;
-    fn.command = 0;
-    fn.stop = stop;
-    fn.path_to_textures = DRAWSTUFF_TEXTURE_PATH;
-    
-    // create world
-    dInitODE();
 
-    // run demo
-    dsSimulationLoop (argc, argv, 800, 600, &fn);
-
-    dJointGroupEmpty (contactgroup);
-    dJointGroupDestroy (contactgroup);
-    dSpaceDestroy (space);
-    dWorldDestroy (world);
-    dCloseODE();
-    return 0;
-}

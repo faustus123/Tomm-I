@@ -27,6 +27,9 @@
 #define _DBG__ std::cout<<__FILE__<<":"<<__LINE__<<std::endl
 #endif
 
+// This is used to make it easier to write rotation matrix elements
+#define r(i,j) rot[i-1 + (j-1)*4]
+
 inline void CopydVector3(dVector3 &dest, const dVector3 &src){for(int i=0;i<4;i++) dest[i] = src[i];}
 
 class RobotGeom{
@@ -499,6 +502,32 @@ public:
             SetServoAngle("FR_foot", SIT_FRONT_KNEE_ANGLE+10);
         }else{
             SetStand();
+        }
+    }
+
+    //-------------------------------------------------
+    // GetStatus
+    //
+    // Get robot status in form of std::map.
+    void GetStatus(std::map<std::string, dReal> &vals){
+
+        // Get orientation of body wrt lab x,y, and z axes.
+        // The cos_* parameters form a unit vector of the "frame"
+        // direction. The original frame direction should be
+        // pointing straight up along the z-axis.
+        auto rot = dBodyGetRotation(bodies["frame"]);
+        dReal theta_x = atan2(r(3,2), r(3,3) );
+        dReal theta_y = atan2(-r(3,1), sqrt( pow(r(3,2), 2.0) + pow(r(3,3),2.0)) );
+        dReal theta_z = atan2(r(2,1), r(1,1) );
+
+        vals["theta_x"] = theta_x;
+        vals["theta_y"] = theta_y;
+        vals["theta_z"] = theta_z;
+
+        // Get angles of all servos
+        for(auto p : joints ){
+            dReal theta_deg = rad2deg*dJointGetHingeAngle( p.second );
+            vals[p.first] = theta_deg;
         }
     }
 
