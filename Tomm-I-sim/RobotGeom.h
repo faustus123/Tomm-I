@@ -469,7 +469,7 @@ public:
         dReal SIT_FRONT_HIP_ANGLE = 90; // degrees
         dReal SIT_FRONT_KNEE_ANGLE= 170; // degrees
         dReal SIT_BACK_HIP_ANGLE  = 110; // degrees
-        dReal SIT_BACK_KNEE_ANGLE = 90; // degrees
+//        dReal SIT_BACK_KNEE_ANGLE = 90; // degrees
 
         static dReal icounter = 0.0;
         dReal T = icounter*sec_per_call;

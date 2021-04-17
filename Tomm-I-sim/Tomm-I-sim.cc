@@ -10,6 +10,13 @@
 #include "RobotGeom.h"
 RobotGeom *robotgeom = nullptr;
 
+// These are used to control the sim loop externally (e.g. from python)
+bool SIM_DONE = false;
+bool SIM_GO = true;
+bool SIM_EXTERNAL_CONTROL = false;
+std::mutex SIM_MUTEX;
+std::condition_variable SIM_CV;
+
 #ifdef dDOUBLE
 #define dsDrawSphere dsDrawSphereD
 #define dsDrawBox dsDrawBoxD
@@ -190,6 +197,28 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
 }
 
 //-----------------------------------------------------
+// simStep
+//
+// NOTE: This is only used when the simLoop is being
+// controlled externally (e.g. by python).
+//
+// Tell simLoop to perform one step. This will block until
+// the step is complete.
+void simStep(void)
+{
+    // Notify simLoop to take a step
+    {
+        SIM_EXTERNAL_CONTROL = true; // ensure simLoop is allowing us to control the steps
+        std::unique_lock<std::mutex> lk(SIM_MUTEX);
+        SIM_GO = true;
+        SIM_CV.notify_all();
+    }
+
+    // Wait for step to complete
+    while( SIM_GO && ! SIM_DONE ) std::this_thread::sleep_for(std::chrono::milliseconds(200));
+}
+
+//-----------------------------------------------------
 // simLoop
 //
 void simLoop(int pause)
@@ -197,6 +226,13 @@ void simLoop(int pause)
     static dReal T = 0.0;
     const dReal step = 0.017; // seconds/step
     const unsigned nsteps = 1; // number of steps to take for each frame drawn
+
+    if( SIM_EXTERNAL_CONTROL ){
+        std::unique_lock<std::mutex> lk(SIM_MUTEX);
+        SIM_GO = false;
+        SIM_CV.wait_for(lk, std::chrono::milliseconds(200));
+        if( ! SIM_GO ) return;
+    }
 
     if (!pause) {
 
