@@ -37,7 +37,7 @@ Here are instructions for building the Tomm-I simulation code.
 n.b. make sure your ODE_HOME environment variable is set to point
 to your ODE library build. 
 ```
-git clone faustus123/Tomm-I
+git clone --recurse-submodules https://github.com/faustus123/Tomm-I
 cd Tomm-I/Tomm-I-sim
 mkdir build
 cd build
