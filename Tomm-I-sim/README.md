@@ -48,9 +48,24 @@ make -j4
 Finally, to run the simulation, do the following. Note this assumes
 you are still in the build directory.
 ```
-./Tomm-I-sim -texturepath $ODE_HOME/drawstuff/textures
-(hit command-Q to quit)
+./Tomm-I-sim
+(hit ctl-C in terminal window to quit)
 ```
-If you don't want to have to type in the "-texturepath ..." arguments
-every time then edit the texturepath.h file and recompile with the
-full path to the directory in your ODE build.
+If you have some issue with it finding the textures, you can add an
+extra argument to tell it where they are:
+```
+./Tomm-I-sim -texturepath $ODE_HOME/drawstuff/textures
+```
+
+## Python
+To run the simulation from python you need to add the directory where
+the python module (TommIsim.so) gets installed to your PYTHONPATH.
+e.g. (assuming you are in the Tomm-I/Tomm-I-sim directory)
+
+```
+setenv PYTHONPATH ${PWD}/python_modules
+python3 example.py
+```
+
+The example.py file has some detailed comments so check there for how
+to use it.
