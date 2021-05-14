@@ -14,8 +14,8 @@ extern bool RUN_REAL_TIME;
 extern bool USE_PREPROGRAMED_ACTIONS;
 extern bool USE_GRAPHICS;
 
-typedef void UserCallbackFunc_t(void);
-extern std::vector<UserCallbackFunc_t> USERCALLBACKS;
+//typedef void (*UserCallbackFunc_t)(void);
+extern std::vector<  void (*)(void) > USERCALLBACKS;
 
 
 void TommI_SimulationSetup(void);

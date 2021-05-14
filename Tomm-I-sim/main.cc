@@ -23,7 +23,8 @@ int main(int argc, char **argv)
     // This is deliberately kept minimal so most of the simulation
     // code can be accessed from both the stand-alone executable
     // and the python module.
-    TommI_SimulationSetupAndRun(argc, argv);
+    TommI_SimulationSetup();
+    TommI_SimulationRun(argc, argv);
     TommI_SimulationCleanup();
 
     return 0;

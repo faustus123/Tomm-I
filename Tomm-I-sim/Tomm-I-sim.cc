@@ -10,12 +10,16 @@
 #include "RobotGeom.h"
 RobotGeom *robotgeom = nullptr;
 
+// This flag is used to tell start() whether it is being called
+// from dsSimulationLoop or not.
+bool SIMLOOP_CALLED = false;
+
 // These are used to control the sim loop externally (e.g. from python)
-bool SIM_DONE = false;
-bool SIM_GO = true;
-bool SIM_EXTERNAL_CONTROL = false;
-std::mutex SIM_MUTEX;
-std::condition_variable SIM_CV;
+//bool SIM_DONE = false;
+//bool SIM_GO = true;
+//bool SIM_EXTERNAL_CONTROL = false;
+//std::mutex SIM_MUTEX;
+//std::condition_variable SIM_CV;
 
 #ifdef dDOUBLE
 #define dsDrawSphere dsDrawSphereD
@@ -47,7 +51,7 @@ bool USE_GRAPHICS = true;
 
 // Used to hold functions that are to be called during each iteration of the
 // main simulation loop.
-std::vector<UserCallbackFunc_t> USERCALLBACKS;
+std::vector< void (*)(void) > USERCALLBACKS;
 
 //// The USE_SINGLE_STEP and SINGLE_STEP_HOLD flags are used to stall
 //// stepping through the simulation loop so it can be controlled
@@ -98,6 +102,7 @@ void TommI_SimulationRun(int argc, char **argv) {
     if( world==0 ) dInitODE();
 
     // run demo
+    SIMLOOP_CALLED = true; // let start() know to setup the viewpoint
     dsSimulationLoop(argc, argv, 800, 600, &fn);
 }
 
@@ -119,29 +124,34 @@ void TommI_SimulationCleanup(void)
 void start(void)
 {
     // (see note above for TommI_SimulationSetup() )
-    if( world != 0 ) return;
+    if( world == 0 ) {
 
-    world = dWorldCreate();
-    dWorldSetGravity (world,0,0,-9.81);
+        world = dWorldCreate();
+        dWorldSetGravity(world, 0, 0, -9.81);
 
-    dWorldSetDamping(world, 1e-4, 8e-3);
-    dWorldSetERP(world, 0.5);
+        dWorldSetDamping(world, 1e-4, 8e-3);
+        dWorldSetERP(world, 0.5);
 
-    contactgroup = dJointGroupCreate (0);
+        contactgroup = dJointGroupCreate(0);
 
-    space = dSimpleSpaceCreate (0);
-    groundID = dCreatePlane (space,0,0,1,0);
+        space = dSimpleSpaceCreate(0);
+        groundID = dCreatePlane(space, 0, 0, 1, 0);
 
-    robotgeom = new RobotGeom(world, space);
-    robotgeom->SetPark(); // This is so the servos have an initial setting
+        robotgeom = new RobotGeom(world, space);
+        robotgeom->SetPark(); // This is so the servos have an initial setting
 
-    SetupActions();
-    ScaleActions(10.0/17.0*23.0/17.5);
+        SetupActions();
+        ScaleActions(10.0 / 17.0 * 23.0 / 17.5);
+    }
 
     // initial camera position
-    static float xyz[3] = {-0.05, +0.9, 0.10};
-    static float hpr[3] = {-86.0, +15.0, 0};
-    if( USE_GRAPHICS )dsSetViewpoint (xyz,hpr);
+    // n.b. dsSetViewpoint can only be called IF we are being called
+    // from dsSimulationLoop().
+    if( SIMLOOP_CALLED ) {
+        static float xyz[3] = {-0.05, +0.9, 0.10};
+        static float hpr[3] = {-86.0, +15.0, 0};
+        if (USE_GRAPHICS)dsSetViewpoint(xyz, hpr);
+    }
 }
 
 //-----------------------------------------------------
@@ -235,27 +245,27 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
     }
 }
 
-//-----------------------------------------------------
-// simStep
+////-----------------------------------------------------
+//// simStep
+////
+//// NOTE: This is only used when the simLoop is being
+//// controlled externally (e.g. by python).
+////
+//// Tell simLoop to perform one step. This will block until
+//// the step is complete.
+//void simStep(void)
+//{
+//    // Notify simLoop to take a step
+//    {
+//        SIM_EXTERNAL_CONTROL = true; // ensure simLoop is allowing us to control the steps
+//        std::unique_lock<std::mutex> lk(SIM_MUTEX);
+//        SIM_GO = true;
+//        SIM_CV.notify_all();
+//    }
 //
-// NOTE: This is only used when the simLoop is being
-// controlled externally (e.g. by python).
-//
-// Tell simLoop to perform one step. This will block until
-// the step is complete.
-void simStep(void)
-{
-    // Notify simLoop to take a step
-    {
-        SIM_EXTERNAL_CONTROL = true; // ensure simLoop is allowing us to control the steps
-        std::unique_lock<std::mutex> lk(SIM_MUTEX);
-        SIM_GO = true;
-        SIM_CV.notify_all();
-    }
-
-    // Wait for step to complete
-    while( SIM_GO && ! SIM_DONE ) std::this_thread::sleep_for(std::chrono::milliseconds(200));
-}
+//    // Wait for step to complete
+//    while( SIM_GO && ! SIM_DONE ) std::this_thread::sleep_for(std::chrono::milliseconds(200));
+//}
 
 //-----------------------------------------------------
 // simLoop

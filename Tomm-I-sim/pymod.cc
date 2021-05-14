@@ -21,21 +21,51 @@
 #include "Tomm-I-sim.h"
 #include "RobotGeom.h"
 
-
+pybind11::list PYCALLBACKS;
 
 //-------------------------------------------
 // Global flag wrapper and trivial wrapper functions
 void TommI_SimulationSetRunRealTimePY(pybind11::object &pyobj) { RUN_REAL_TIME = pybind11::cast<bool>(pyobj); }
 void TommI_SimulationSetUsePreprogrammedActionsPY(pybind11::object &pyobj) { USE_PREPROGRAMED_ACTIONS = pybind11::cast<bool>(pyobj); }
 void TommI_SimulationSetUseGraphicsPY(pybind11::object &pyobj) { USE_GRAPHICS = pybind11::cast<bool>(pyobj); }
-void TommI_SimulationSetupPY(pybind11::object &pyobj){ TommI_SimulationSetup(); }
+void TommI_SimulationSetupPY(void){ TommI_SimulationSetup(); }
 
+
+//-------------------------------------------
+// TommI_SimulationRunPYCallbacks
+//
+/// Run all python user supplied callbacks. This gets called
+/// for every iteration of the simulation loop when it runs
+/// the USERCALLBACKS.
+///
+/// See notes for TommI_SimulationRegisterCallbackPY for more.
+void TommI_SimulationRunPYCallbacks(void) {
+    for(auto fun : PYCALLBACKS){
+        fun();
+    }
+}
+
+//-------------------------------------------
+// TommI_SimulationRegisterCallbackPY
+//
+/// Register a python routine to be called back for every iteration
+/// of the simulation loop. On the first call to this, the
+/// TommI_SimulationRunPYCallbacks routine is registered in the
+/// user callbacks. Thus, the way this works is that all python
+/// callbacks are handled by a single C++ callback in USERCALLBACKS.
+void TommI_SimulationRegisterCallbackPY(pybind11::function &pyfun){
+
+    PYCALLBACKS.append(pyfun);
+    if( PYCALLBACKS.size() ==1 ){
+        USERCALLBACKS.push_back( TommI_SimulationRunPYCallbacks );
+    }
+}
 
 //-------------------------------------------
 // TommI_SimulationRunPY
 //
-// Call the TommI_SimulationRun() subroutine
-void TommI_SimulationRunPY(pybind11::object &pyobj){
+/// Call the TommI_SimulationRun() subroutine
+void TommI_SimulationRunPY(void){
     std::vector<char *> vargv;
     TommI_SimulationRun(vargv.size(), vargv.data());
 }
@@ -43,14 +73,14 @@ void TommI_SimulationRunPY(pybind11::object &pyobj){
 //-------------------------------------------
 // TommI_SimulationCleanupPY
 //
-void TommI_SimulationCleanupPY(pybind11::object &pyobj){
+void TommI_SimulationCleanupPY(void){
     TommI_SimulationCleanup();
 }
 
 //-------------------------------------------
 // TommI_SimulationGetStatusPY
 //
-pybind11::object TommI_SimulationGetStatusPY(pybind11::object &pyobj){
+pybind11::object TommI_SimulationGetStatusPY(void){
 
     // Get status of robot as map
     std::map<std::string, dReal> vals;
@@ -118,27 +148,13 @@ PYBIND11_MODULE(TommIsim, m) {
     m.def("SetUsePreprogrammedActions", &TommI_SimulationSetUsePreprogrammedActionsPY, "Set this flag to run a set of pre-programmed actions (for debugging).");
     m.def("SetUseGraphics", &TommI_SimulationSetUseGraphicsPY, "Set this flag to draw the graphics during the simulation (this will slow it down significantly).");
 
-
+    m.def("RegisterCallback", &TommI_SimulationRegisterCallbackPY, "Register a python routine to be called during each iteration of the simulation loop.");
     m.def("Setup", &TommI_SimulationSetupPY, "Setup the simulation and start it.");
     m.def("Run", &TommI_SimulationRunPY, "Setup the simulation and start it.");
     m.def("Cleanup", &TommI_SimulationCleanupPY, "Setup the simulation and start it.");
     m.def("GetStatus", &TommI_SimulationGetStatusPY, "Get current robot status.");
     m.def("GetMotorNames", &TommI_SimulationGetMotorNamesPY, "Get list of motor names.");
     m.def("SetMotors", &TommI_SimulationSetMotorsPY, "Set motor angles. Pass values as dictionary with keys being motor names and values being target angle in degrees.");
-
-
-//	py::class_<JEventProcessorPY>(m, "JEventProcessor")\
-//	.def(py::init<py::object&>())\
-//	.def("Init",       &JEventProcessorPY::Init)\
-//	.def("Process",    &JEventProcessorPY::Process)\
-//	.def("Finish",     &JEventProcessorPY::Finish)\
-//	.def("Prefetch",   &JEventProcessorPY::Prefetch, py::arg("fac_name"), py::arg("tag")="")\
-//	.def("Get",        &JEventProcessorPY::Get, py::arg("fac_name"), py::arg("tag")="");\
-//	\
-//	/* C-wrapper routines */ \
-//	m.def("Start",                       &janapy_Start,                       "Allow JANA system to start processing data. (Not needed for short scripts.)"); \
-//	// (see src/python/common/janapy.h)
-
 
 }
 
