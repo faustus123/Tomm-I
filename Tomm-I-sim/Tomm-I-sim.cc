@@ -24,7 +24,7 @@ std::condition_variable SIM_CV;
 #define dsDrawCapsule dsDrawCapsuleD
 #endif
 
-dWorldID world;
+dWorldID world=0;
 dSpaceID space;
 dGeomID groundID;
 dJointGroupID contactgroup;
@@ -45,28 +45,64 @@ bool USE_PREPROGRAMED_ACTIONS = true;
 // Set this to false to skip drawing frames during the simulation
 bool USE_GRAPHICS = true;
 
+// Used to hold functions that are to be called during each iteration of the
+// main simulation loop.
+std::vector<UserCallbackFunc_t> USERCALLBACKS;
+
+//// The USE_SINGLE_STEP and SINGLE_STEP_HOLD flags are used to stall
+//// stepping through the simulation loop so it can be controlled
+//// externally from python.
+//bool USE_SINGLE_STEP = false;
+//bool SINGLE_STEP_HOLD = true;
+
 //-----------------------------------------------------
-// int TommI_SimulationSetupAndRun(int argc, char **argv) {
+// TommI_SimulationSetup
 //
-void TommI_SimulationSetupAndRun(int argc, char **argv) {
+/// This is not strictly required!
+/// This will initialize the ODE engine and setup the robot
+/// geometry by calling "start()". The way the ODE authors set
+/// this up was to have start() called as a callback from
+/// dsSimulationLoop(). However, for the python inferface we
+/// want to have the option of doing something after the geometry
+/// has been set up but before the simulation proper starts().
+/// The start() function has been tooled to only setup the
+/// geometry on the first call and to do nothing for subsequent
+/// calls. Thus, if you do not call this, start() will still get run
+/// when dsSimulationLoop is called from TommI_SimulationRun()
+/// later.
+void TommI_SimulationSetup(void) {
+
+    // Initialize ODE engine
+    dInitODE();
+
+    // Call start() to initialize geometry.
+    // n.b. this will set the "world" global which is used to
+    // check whether start() has already been called.
+    start();
+}
+
+//-----------------------------------------------------
+// TommI_SimulationRun
+//
+void TommI_SimulationRun(int argc, char **argv) {
     // setup pointers to drawstuff callback functions
     dsFunctions fn;
     fn.version = DS_VERSION;
     fn.start = &start;
     fn.step = &simLoop;
     fn.command = 0;
-    fn.stop = stop;
+    fn.stop = &stop;
     fn.path_to_textures = DRAWSTUFF_TEXTURE_PATH;
 
-    // create world
-    dInitODE();
+    // Initialize ODE engine
+    if( world==0 ) dInitODE();
 
     // run demo
     dsSimulationLoop(argc, argv, 800, 600, &fn);
 }
 
 //-----------------------------------------------------
-// int TommI_SimulationSetupAndRun(int argc, char **argv) {
+// TommI_SimulationCleanup
 //
 void TommI_SimulationCleanup(void)
 {
@@ -82,6 +118,9 @@ void TommI_SimulationCleanup(void)
 //
 void start(void)
 {
+    // (see note above for TommI_SimulationSetup() )
+    if( world != 0 ) return;
+
     world = dWorldCreate();
     dWorldSetGravity (world,0,0,-9.81);
 
@@ -227,13 +266,6 @@ void simLoop(int pause)
     const dReal step = 0.017; // seconds/step
     const unsigned nsteps = 1; // number of steps to take for each frame drawn
 
-    if( SIM_EXTERNAL_CONTROL ){
-        std::unique_lock<std::mutex> lk(SIM_MUTEX);
-        SIM_GO = false;
-        SIM_CV.wait_for(lk, std::chrono::milliseconds(200));
-        if( ! SIM_GO ) return;
-    }
-
     if (!pause) {
 
         for (unsigned i=0; i<nsteps; ++i) {
@@ -254,6 +286,7 @@ void simLoop(int pause)
     // robotgeom->SetServoAngle(theta)
     // where theta is in degrees.
     //-------------------------------------------------
+    for( auto f : USERCALLBACKS ) f();
 
     // Refresh all servos so ones that have not had their settings
     // explicitly updated this step will still try and honor the

@@ -3,17 +3,23 @@
 #ifndef __TOMM_I_SIM_H__
 
 #include <mutex>
-#include <condition_variable>
 
 #include <ode/ode.h>
 #include <drawstuff/drawstuff.h>
 #include "texturepath.h"
 
-extern bool SIM_EXTERNAL_CONTROL;
-extern std::mutex SIM_MUTEX;
-extern std::condition_variable SIM_CV;
+// Global flags used to control simulation.
+// (see full descriptions in Tomm-I-sim.cc)
+extern bool RUN_REAL_TIME;
+extern bool USE_PREPROGRAMED_ACTIONS;
+extern bool USE_GRAPHICS;
 
-void TommI_SimulationSetupAndRun(int argc, char **argv);
+typedef void UserCallbackFunc_t(void);
+extern std::vector<UserCallbackFunc_t> USERCALLBACKS;
+
+
+void TommI_SimulationSetup(void);
+void TommI_SimulationRun(int argc, char **argv);
 void TommI_SimulationCleanup(void);
 
 void start(void);

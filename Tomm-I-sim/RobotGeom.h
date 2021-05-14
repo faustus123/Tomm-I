@@ -32,6 +32,9 @@
 
 inline void CopydVector3(dVector3 &dest, const dVector3 &src){for(int i=0;i<4;i++) dest[i] = src[i];}
 
+class RobotGeom;
+extern RobotGeom *robotgeom; // defined in Tomm-I-sim.cc
+
 class RobotGeom{
 public:
 

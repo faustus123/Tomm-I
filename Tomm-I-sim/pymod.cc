@@ -1,48 +1,56 @@
+//
+// This file provides the python interface to the simulation.
+// The routines ending in "PY" here are intended to be called from python.
+// For the most part routines here named "TommI_SimulationXXXPY()" will be
+// mapped so that they may be called with just XXX() from python.
+//
+// Note that this is set up using a callback mechanism so that the "main"
+// thread can be used to draw all of the graphics. This is a requirement
+// on macos. The users Python script needs to provide an
+// object of a class that has a "step()" method that can be called at each
+// iteration of the simulation loop.
+//
+
 
 #include <thread>
+#include <chrono>
 #include <pybind11/pybind11.h>
 
 #include "Tomm-I-sim.h"
 #include "RobotGeom.h"
-extern RobotGeom *robotgeom;
+#include "Tomm-I-sim.h"
+#include "RobotGeom.h"
 
-extern bool RUN_REAL_TIME;
-extern bool USE_PREPROGRAMED_ACTIONS;
-extern bool USE_GRAPHICS;
 
-//-------------------------------------------
-// Global flag wrapper functions
-void TommI_SimulationSetRunRealTime(pybind11::object &pyobj) { RUN_REAL_TIME = pybind11::cast<bool>(pyobj); }
-void TommI_SimulationSetUsePreprogrammedActions(pybind11::object &pyobj) { USE_PREPROGRAMED_ACTIONS = pybind11::cast<bool>(pyobj); }
-void TommI_SimulationSetUseGraphics(pybind11::object &pyobj) { USE_GRAPHICS = pybind11::cast<bool>(pyobj); }
 
 //-------------------------------------------
-// TommI_SimulationSetupAndRunPYWrapper
+// Global flag wrapper and trivial wrapper functions
+void TommI_SimulationSetRunRealTimePY(pybind11::object &pyobj) { RUN_REAL_TIME = pybind11::cast<bool>(pyobj); }
+void TommI_SimulationSetUsePreprogrammedActionsPY(pybind11::object &pyobj) { USE_PREPROGRAMED_ACTIONS = pybind11::cast<bool>(pyobj); }
+void TommI_SimulationSetUseGraphicsPY(pybind11::object &pyobj) { USE_GRAPHICS = pybind11::cast<bool>(pyobj); }
+void TommI_SimulationSetupPY(pybind11::object &pyobj){ TommI_SimulationSetup(); }
+
+
+//-------------------------------------------
+// TommI_SimulationRunPY
 //
-// Call the TommI_SimulationSetupAndRun() subroutine
-// using a separate, detached thread.
-void TommI_SimulationSetupAndRunPYWrapper(void){
-
-    std::thread thr( [](){
-            std::vector<char *> vargv;
-            TommI_SimulationSetupAndRun(vargv.size(), vargv.data());
-        }
-    );
-
-    thr.detach();
+// Call the TommI_SimulationRun() subroutine
+void TommI_SimulationRunPY(pybind11::object &pyobj){
+    std::vector<char *> vargv;
+    TommI_SimulationRun(vargv.size(), vargv.data());
 }
 
 //-------------------------------------------
-// TommI_SimulationCleanupPYWrapper
+// TommI_SimulationCleanupPY
 //
-void TommI_SimulationCleanupPYWrapper(pybind11::object &pyobj){
+void TommI_SimulationCleanupPY(pybind11::object &pyobj){
     TommI_SimulationCleanup();
 }
 
 //-------------------------------------------
-// TommI_SimulationGetStatus
+// TommI_SimulationGetStatusPY
 //
-pybind11::object TommI_SimulationGetStatus(void){
+pybind11::object TommI_SimulationGetStatusPY(pybind11::object &pyobj){
 
     // Get status of robot as map
     std::map<std::string, dReal> vals;
@@ -58,9 +66,9 @@ pybind11::object TommI_SimulationGetStatus(void){
 }
 
 //-------------------------------------------
-// TommI_SimulationGetMotorNames
+// TommI_SimulationGetMotorNamesPY
 //
-pybind11::dict TommI_SimulationGetMotorNames(pybind11::dict &pydict){
+pybind11::dict TommI_SimulationGetMotorNamesPY(pybind11::dict &pydict){
 
     auto pymotor_names = pybind11::list();
 
@@ -79,9 +87,9 @@ pybind11::dict TommI_SimulationGetMotorNames(pybind11::dict &pydict){
 }
 
 //-------------------------------------------
-// TommI_SimulationSetMotors
+// TommI_SimulationSetMotorsPY
 //
-pybind11::object TommI_SimulationSetMotors(pybind11::dict &pydict){
+pybind11::object TommI_SimulationSetMotorsPY(pybind11::dict &pydict){
 
     // pydict is a python dictionary with keys being the motor
     // name and value being the angle (in degrees) to set the
@@ -97,37 +105,26 @@ pybind11::object TommI_SimulationSetMotors(pybind11::dict &pydict){
     return std::move(pydict);
 }
 
-//-------------------------------------------
-// TommI_SimulationStep
-//
-// Execute one step of the simulation and return
-// the robot status after the step.
-pybind11::object TommI_SimulationStep(pybind11::object &pyobj){
-
-    // Take one simulation step (blocks until step is complete)
-    simStep();
-
-    return TommI_SimulationGetStatus();
-}
-
 //=============================================================================================================
+
+
 
 //  Define the TommIsim python module
 PYBIND11_MODULE(TommIsim, m) {
 
 	m.doc() = "Tomm-I-sim simulation of quadraped robot";
 
-    m.def("SetRunRealTime", &TommI_SimulationSetRunRealTime, "Set this flag to add delay (if possible) to simulation loop to try and make it run in close to real time.");
-    m.def("SetUsePreprogrammedActions", &TommI_SimulationSetUsePreprogrammedActions, "Set this flag to run a set of pre-programmed actions (for debugging).");
-    m.def("SetUseGraphics", &TommI_SimulationSetUseGraphics, "Set this flag to draw the graphics during the simulation (this will slow it down significantly).");
+    m.def("SetRunRealTime", &TommI_SimulationSetRunRealTimePY, "Set this flag to add delay (if possible) to simulation loop to try and make it run in close to real time.");
+    m.def("SetUsePreprogrammedActions", &TommI_SimulationSetUsePreprogrammedActionsPY, "Set this flag to run a set of pre-programmed actions (for debugging).");
+    m.def("SetUseGraphics", &TommI_SimulationSetUseGraphicsPY, "Set this flag to draw the graphics during the simulation (this will slow it down significantly).");
 
 
-    m.def("SetupAndRun", &TommI_SimulationSetupAndRunPYWrapper, "Setup the simulation and start it.");
-    m.def("Cleanup", &TommI_SimulationCleanupPYWrapper, "Setup the simulation and start it.");
-    m.def("GetStatus", &TommI_SimulationGetStatus, "Get current robot status.");
-    m.def("GetMotorNames", &TommI_SimulationGetMotorNames, "Get list of motor names.");
-    m.def("SetMotors", &TommI_SimulationSetMotors, "Set motor angles. Pass values as dictionary with keys being motor names and values being target angle in degrees.");
-    m.def("Step", &TommI_SimulationStep, "Take one simulation step.");
+    m.def("Setup", &TommI_SimulationSetupPY, "Setup the simulation and start it.");
+    m.def("Run", &TommI_SimulationRunPY, "Setup the simulation and start it.");
+    m.def("Cleanup", &TommI_SimulationCleanupPY, "Setup the simulation and start it.");
+    m.def("GetStatus", &TommI_SimulationGetStatusPY, "Get current robot status.");
+    m.def("GetMotorNames", &TommI_SimulationGetMotorNamesPY, "Get list of motor names.");
+    m.def("SetMotors", &TommI_SimulationSetMotorsPY, "Set motor angles. Pass values as dictionary with keys being motor names and values being target angle in degrees.");
 
 
 //	py::class_<JEventProcessorPY>(m, "JEventProcessor")\
