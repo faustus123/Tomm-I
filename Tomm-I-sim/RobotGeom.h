@@ -514,18 +514,90 @@ public:
     // Get robot status in form of std::map.
     void GetStatus(std::map<std::string, dReal> &vals){
 
-        // Get orientation of body wrt lab x,y, and z axes.
-        // The cos_* parameters form a unit vector of the "frame"
-        // direction. The original frame direction should be
-        // pointing straight up along the z-axis.
-        auto rot = dBodyGetRotation(bodies["frame"]);
-        dReal theta_x = atan2(r(3,2), r(3,3) );
-        dReal theta_y = atan2(-r(3,1), sqrt( pow(r(3,2), 2.0) + pow(r(3,3),2.0)) );
-        dReal theta_z = atan2(r(2,1), r(1,1) );
+        // Get orientation of body as would be measured
+        // by the MPU6050 accelerometer. We will use the
+        // measurements of the device to calculate the
+        // yaw, pitch, and roll. These are what should
+        // be used by the AI to keep the body level (pitch
+        // and roll) and to control the direction of walking
+        // (yaw).
+        //
+        // To get those values here we have to extract them
+        // from the rotation matrix (R) for the main body.
+        // This is a little tricky since the pitch and roll
+        // values are independent of how the overall direction
+        // the robot is facing.
+        //
+        // The coordinates used by the simulation have the
+        // rotation about the X-axis be the roll and the
+        // rotation about the Y-axis be the pitch. The
+        // rotation about the Z-axis is the yaw.
+        //
+        // To get the pitch, we take a vector pointing in the
+        // X-direction (forward for the robot) and rotate
+        // it using R. Then we dot it into the +Z direction
+        // vector for the lab frame. This will give us
+        // the cosine of the angle between the direction the
+        // robot is facing and the z-axis. If the robot is
+        // level, that angle will be pi/2. If the robot is
+        // facing down, it will be greater than pi/2 and if
+        // it is facing up, it will be less than pi/2. Thus,
+        // The pitch angle is given by:
+        //
+        //   pitch = pi/2 - z.R.x
+        //
+        //  where "z" above is (transpose) unit vector (0,0,1)
+        //        "R" is the rotation matrix for the body
+        //        "x" is the unit vector (1,0,0)
+        //
+        // Similarly,
+        //
+        //   roll = pi/2 - z.R.y
+        //
+        // yaw is a bit more complicated since you really want
+        // an angle in the x-y plane of the lab. I'm not 100%
+        // sure I got this right, but here goes. Basically,
+        // rotate the unit vector in the x-direction (straight
+        // forward) and then use the just the x and y components
+        // to calculate the angle in the lab x-y plane. This fails
+        // for the case when the robot is facing straight up or
+        // down since that rotated vector will be oriented purely
+        // along z. In that case we need to use the y-direction
+        // vector. Here, I actually decide which
+        // to use based on which has the greater projection to the
+        // x-y plane.
+        //
+        // Below, I use the following variables for the rotation
+        // matrix elements:
+        //
+        //            a  b  c
+        //      R  =  d  e  f
+        //            g  h  i
 
-        vals["theta_x"] = theta_x;
-        vals["theta_y"] = theta_y;
-        vals["theta_z"] = theta_z;
+        auto rot = dBodyGetRotation(bodies["frame"]);
+
+        // Make succinct variables to access rotation matix elements
+        auto &a = r(1,1);    auto &b = r(2,1);    //auto &c = r(3,1);
+        auto &d = r(1,2);    auto &e = r(2,2);    //auto &f = r(3,2);
+        auto &g = r(1,3);    auto &h = r(2,3);    //auto &i = r(3,3);
+
+        // TODO: These seem to only be valid between +/-90 degrees. Some
+        // sign manipulation is needed to make it work outside of that range.
+        dReal pitch = M_PI_2 - acos( g );
+        dReal roll  = M_PI_2 - acos( h );
+        dReal yaw = 0.0; // placeholder
+
+        dReal proj_len2_x = a*a + d*d;
+        dReal proj_len2_y = e*e + b*b;
+        if( proj_len2_x > proj_len2_y ){
+            yaw = atan2(d, a);
+        }else{
+            yaw = atan2(b,e);
+        }
+
+        vals["pitch"] = rad2deg*pitch;
+        vals["roll"] = rad2deg*roll;
+        vals["yaw"] = rad2deg*yaw;
 
         // Get angles of all servos
         for(auto p : joints ){

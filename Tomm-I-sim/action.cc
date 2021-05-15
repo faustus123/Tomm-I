@@ -99,16 +99,16 @@ void SetupActions(void){
     // Roll over
     duration = 100;
     last_action =
-            action_manager.AddAction(FR1,  90, duration, last_action);
-    action_manager.AddAction(FR2, 180, duration, last_action, START_OF_ACTION);
-    action_manager.AddAction(BR1,  90, duration, last_action, START_OF_ACTION);
-    action_manager.AddAction(BR2, 180, duration, last_action, START_OF_ACTION);
+    action_manager.AddAction(FL1,  90, duration, last_action);
+    action_manager.AddAction(FL2, 180, duration, last_action, START_OF_ACTION);
+    action_manager.AddAction(BL1,  90, duration, last_action, START_OF_ACTION);
+    action_manager.AddAction(BL2, 180, duration, last_action, START_OF_ACTION);
 
     duration = 50;
-    action_manager.AddAction(FR1, LAY_HIP_ANGLE, duration, last_action);
-    action_manager.AddAction(FR2, LAY_KNEE_ANGLE, duration, last_action);
-    action_manager.AddAction(BR1, LAY_HIP_ANGLE, duration, last_action);
-    action_manager.AddAction(BR2, LAY_KNEE_ANGLE, duration, last_action);
+    action_manager.AddAction(FL1, LAY_HIP_ANGLE, duration, last_action);
+    action_manager.AddAction(FL2, LAY_KNEE_ANGLE, duration, last_action);
+    action_manager.AddAction(BL1, LAY_HIP_ANGLE, duration, last_action);
+    action_manager.AddAction(BL2, LAY_KNEE_ANGLE, duration, last_action);
 
     // Park
     // action_manager.AddHipAction(PARK_HIP_ANGLE, duration, last_action);
