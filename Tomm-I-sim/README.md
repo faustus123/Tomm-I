@@ -19,11 +19,19 @@ rudimentary for the purposes of their demo programs. I believe
 they don't recommend it because it is not fully featured and
 they don't want to have to support it.
 
-Having said that, here are step-by-step instructions for building
-the ODE library.
+The way I have this set up on my system is that the ODE library
+is built inside of the "extern" subdirectory of the Tomm-I
+source. Thus, the first thing to do is clone the Tomm-I source:
 ```
-mkdir ODE
-cd ODE
+git clone --recurse-submodules https://github.com/faustus123/Tomm-I
+cd Tomm-I
+```
+
+Second, download the ODE source and build it. Note that the 
+libdrawstuff library needs to be copied to a more convenient
+place at the end.
+```
+cd extern
 wget https://bitbucket.org/odedevs/ode/downloads/ode-0.16.2.tar.gz
 tar xzf ode-0.16.2.tar.gz
 setenv ODE_HOME $PWD/ode-0.16.2
@@ -31,14 +39,14 @@ cd ${ODE_HOME}/build
 cmake -DCMAKE_INSTALL_PREFIX=.. -DBUILD_SHARED_LIBS=0 ..
 make -j4 install
 cp libdrawstuff.* ../lib
+cd ../../../  # move back to Tomm-I directory
 ```
 
 Here are instructions for building the Tomm-I simulation code. 
 n.b. make sure your ODE_HOME environment variable is set to point
 to your ODE library build. 
 ```
-git clone --recurse-submodules https://github.com/faustus123/Tomm-I
-cd Tomm-I/Tomm-I-sim
+cd Tomm-I-sim  # Assuming you are in the top-level Tomm-I directory
 mkdir build
 cd build
 cmake ..
@@ -68,4 +76,6 @@ python3 example.py
 ```
 
 The example.py file has some detailed comments so check there for how
-to use it.
+to use it. The file example2.py expands on this a bit by showing how
+to reset the simulation when it starts to go off the rails something
+like AI training can keep trying over and over.
