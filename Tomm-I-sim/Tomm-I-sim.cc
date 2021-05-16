@@ -5,6 +5,11 @@
 #include <chrono>
 #include <thread>
 
+//#ifdef HAVE_APPLE_OPENGL_FRAMEWORK
+#include <OpenGL/gl.h>
+#include <GLUT/glut.h>
+//#endif
+
 #include "Tomm-I-sim.h"
 #include "action.hpp"
 #include "RobotGeom.h"
@@ -42,9 +47,10 @@ dJointGroupID contactgroup;
 bool RUN_REAL_TIME = true;
 
 // This flag tells the simulation to run the sequence of pre-programmed motions
-// defined in action.cc::SetupActions(). This should be set to false if trying
-// to run the simulation for other purposes.
-bool USE_PREPROGRAMED_ACTIONS = true;
+// defined in action.cc::SetupActions(). Set this to true to check that the
+// physics simulation is working by watching that the robot moves in a reasonable
+// way.
+bool USE_PREPROGRAMED_ACTIONS = false;
 
 // Set this to false to skip drawing frames during the simulation
 bool USE_GRAPHICS = true;
@@ -107,6 +113,26 @@ void TommI_SimulationRun(int argc, char **argv) {
 }
 
 //-----------------------------------------------------
+// TommI_SimulationReset
+//
+// Called during the simulation to reset the simulation
+// to its starting configuration.
+void TommI_SimulationReset(void) {
+
+    // The OS X implementation of the drawstuff library from ODE uses
+    // GLUT and calls glutMainLoop() at the end of dsSimulationLoop().
+    // That routine never returns so resetting is just the simulation
+    // part itself.
+    std::cout << "Simulation resetting ...." << std::endl;
+
+    // Destroy everything and then recreate it from scratch
+    TommI_SimulationCleanup();
+    SIMLOOP_CALLED = false;
+    TommI_SimulationSetup();
+//    start();
+}
+
+//-----------------------------------------------------
 // TommI_SimulationCleanup
 //
 void TommI_SimulationCleanup(void)
@@ -115,6 +141,12 @@ void TommI_SimulationCleanup(void)
     dJointGroupDestroy (contactgroup);
     dSpaceDestroy (space);
     dWorldDestroy (world);
+    world=0;
+
+    delete robotgeom;
+    robotgeom = nullptr;
+    ClearAllActions();
+
     dCloseODE();
 }
 
@@ -157,10 +189,10 @@ void start(void)
 //-----------------------------------------------------
 // stop
 //
+// this is a callback invoked by dsSimulationLoop
 void stop(void)
 {
-    dSpaceDestroy(space);
-    dWorldDestroy(world);
+
 }
 
 //-----------------------------------------------------

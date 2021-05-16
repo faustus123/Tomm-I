@@ -11,6 +11,7 @@
 
 import TommIsim
 
+#------------------------------------------------------------
 # This procedure gets registered below as a callback so that it
 # is called at every iteration of the simulation loop. The time
 # steps may be smaller than would be realistic for a physical
@@ -43,13 +44,10 @@ def MyPythonCallback():
 
 #======================================================================
 TommIsim.SetRunRealTime( False )
-#TommIsim.SetUsePreprogrammedActions( False ) # uncomment this line to turn off the pre-programmed sequence used for the initial video
+TommIsim.SetUsePreprogrammedActions( True ) # comment this line to turn off the pre-programmed sequence used for the initial video
 TommIsim.Setup()
 TommIsim.RegisterCallback(MyPythonCallback)
 
-# n.b. this will block until the simulation is complete
+# n.b. this will block forever
 TommIsim.Run()
-
-print("Done.")
-
 

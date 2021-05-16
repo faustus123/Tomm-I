@@ -20,6 +20,7 @@ extern std::vector<  void (*)(void) > USERCALLBACKS;
 
 void TommI_SimulationSetup(void);
 void TommI_SimulationRun(int argc, char **argv);
+void TommI_SimulationReset(void);
 void TommI_SimulationCleanup(void);
 
 void start(void);

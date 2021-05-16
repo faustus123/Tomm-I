@@ -29,6 +29,7 @@ void TommI_SimulationSetRunRealTimePY(pybind11::object &pyobj) { RUN_REAL_TIME =
 void TommI_SimulationSetUsePreprogrammedActionsPY(pybind11::object &pyobj) { USE_PREPROGRAMED_ACTIONS = pybind11::cast<bool>(pyobj); }
 void TommI_SimulationSetUseGraphicsPY(pybind11::object &pyobj) { USE_GRAPHICS = pybind11::cast<bool>(pyobj); }
 void TommI_SimulationSetupPY(void){ TommI_SimulationSetup(); }
+void TommI_SimulationResetPY(void){ TommI_SimulationReset(); }
 
 
 //-------------------------------------------
@@ -150,6 +151,7 @@ PYBIND11_MODULE(TommIsim, m) {
 
     m.def("RegisterCallback", &TommI_SimulationRegisterCallbackPY, "Register a python routine to be called during each iteration of the simulation loop.");
     m.def("Setup", &TommI_SimulationSetupPY, "Setup the simulation and start it.");
+    m.def("Reset", &TommI_SimulationResetPY, "Reset the simulation to the starting configuration.");
     m.def("Run", &TommI_SimulationRunPY, "Setup the simulation and start it.");
     m.def("Cleanup", &TommI_SimulationCleanupPY, "Setup the simulation and start it.");
     m.def("GetStatus", &TommI_SimulationGetStatusPY, "Get current robot status.");

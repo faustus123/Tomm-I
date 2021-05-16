@@ -117,6 +117,14 @@ void SetupActions(void){
     // Delay 2 seconds after first action is complete
     last_action = action_manager.AddDelay(20000/TIME_DELAY);
 
+    std::cout << "Nactions defined: " << (int)action_manager.Nactions << " (last_action="<< (int)last_action << ")" << std::endl;
+}
+
+//------------------------------------------------------------
+// ClearAllActions
+//
+void ClearAllActions(void) {
+    action_manager.ClearAllActions();
 }
 
 //------------------------------------------------------------

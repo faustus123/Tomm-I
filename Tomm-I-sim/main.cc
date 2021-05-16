@@ -23,6 +23,9 @@ int main(int argc, char **argv)
     // This is deliberately kept minimal so most of the simulation
     // code can be accessed from both the stand-alone executable
     // and the python module.
+
+    USE_PREPROGRAMED_ACTIONS = true; // comment this out to disable the set of pre-programmed robot actions
+
     TommI_SimulationSetup();
     TommI_SimulationRun(argc, argv);
     TommI_SimulationCleanup();

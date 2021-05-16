@@ -34,6 +34,7 @@ extern std::map<int, std::string> chanid2name;
 
 // Defined in action.cc
 void SetupActions(void);
+void ClearAllActions(void);
 void ScaleActions(dReal factor);
 void RunActions(RobotGeom *robotgeom);
 
@@ -74,6 +75,16 @@ public:
     }
 
     //-----------------------------------
+    // ClearAllActions
+    //-----------------------------------
+    void ClearAllActions(void) {
+        /// This simply resets the Nactions counter and Niterations counter
+        /// to their defaults.
+        Nactions = 0;
+        Niterations = 1;
+    }
+
+    //-----------------------------------
     // AddAction
     //-----------------------------------
     uint8_t AddAction(uint8_t chanid, float end_angle, uint16_t duration_tics, uint8_t predecessor=NO_PREDECESSOR, uint16_t offset_tics=END_OF_ACTION){
@@ -103,7 +114,6 @@ public:
         if( (predecessor != NO_PREDECESSOR) && (a->offset_tics==END_OF_ACTION) ){
             a->offset_tics = actions[predecessor].duration_tics;
         }
-
         Nactions++;
         return Nactions-1;
     }
@@ -183,7 +193,7 @@ public:
                 for( uint8_t i=0; i < Nactions; i++ ){
                     action *a = &actions[i];
                     if( a->predecessor == NO_PREDECESSOR ) {
-                        _DBG_<<" starting action " << (int)i << std::endl;
+//                        _DBG_<<" starting action " << (int)i << std::endl;
                         a->tic = 1;  // start action
                         a->active_start_angle = a->start_angle;
                         if( chanid2name.count(a->chanid) == 0) continue;
@@ -206,7 +216,7 @@ public:
             // if( a_pred->tic == NOT_RUNNING ) continue;
             if( a_pred->tic == a->offset_tics ){
                 // Serial.print("Starting secondary action: "); Serial.println(i);
-                _DBG_<<" starting action " << (int)i << std::endl;
+//                _DBG_<<" starting action " << (int)i << std::endl;
                 a->tic = 1;
                 a->active_start_angle = a->start_angle;
 //                if(a->active_start_angle == CURRENT_ANGLE) a->active_start_angle = servos[a->chanid].last_setting;
