@@ -23,6 +23,7 @@ def MyPythonCallback():
     # hip joint.
     status = TommIsim.GetStatus()
     print('yaw: %f  pitch: %f  roll: %f' % (status['yaw'], status['pitch'], status['roll']))
+    print('x: %f  y: %f  z: %f' % (status['x'], status['y'], status['z']))
 
     # One can set the desired angles of each of the leg joints using
     # a dictionary with the same names as are in the status (e.g. "FR_foot").
@@ -44,7 +45,7 @@ def MyPythonCallback():
 
 #======================================================================
 TommIsim.SetRunRealTime( False )
-#TommIsim.SetUsePreprogrammedActions( False ) # uncomment this line to turn off the pre-programmed sequence used for the initial video
+TommIsim.SetUsePreprogrammedActions( True ) # comment this line to turn off the pre-programmed sequence used for the initial video
 TommIsim.Setup()
 TommIsim.RegisterCallback(MyPythonCallback)
 

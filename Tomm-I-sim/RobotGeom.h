@@ -599,6 +599,11 @@ public:
         vals["roll"] = rad2deg*roll;
         vals["yaw"] = rad2deg*yaw;
 
+        auto pos = dBodyGetPosition(bodies["frame"]);
+        vals["x"] = pos[0];
+        vals["y"] = pos[1];
+        vals["z"] = pos[2];
+
         // Get angles of all servos
         for(auto p : joints ){
             dReal theta_deg = rad2deg*dJointGetHingeAngle( p.second );
