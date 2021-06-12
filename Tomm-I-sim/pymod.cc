@@ -130,6 +130,7 @@ pybind11::object TommI_SimulationSetMotorsPY(pybind11::dict &pydict){
     for( auto p : pydict ){
         auto name = p.first.cast<std::string>();
         auto angle = p.second.cast<dReal>();
+//        std::cout << "robotgeom->SetServoAngle( \"" << name << "\", " << angle << ");" << std::endl;
         robotgeom->SetServoAngle( name, angle );
     }
 
