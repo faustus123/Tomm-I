@@ -203,7 +203,7 @@ public:
         dJointAttach(joint_hip, bodies["frame"], bodies[thigh_name]);
         dJointSetHingeAxis(joint_hip, 0, 1, 0);
         dJointSetHingeAnchor(joint_hip, pos_hip_joint[0], pos_hip_joint[1], pos_hip_joint[2]);
-       joints[hip_name] = joint_hip;
+        joints[hip_name] = joint_hip;
 
         auto joint_foot = dJointCreateHinge(worldID, jointgroupID);
         dJointAttach(joint_foot, bodies[thigh_name], bodies[foot_name]);
@@ -212,10 +212,13 @@ public:
         joints[foot_name] = joint_foot;
 
         // Put stops on the angles for the joints
-        dReal hip_lo_stop = -30.0*deg2rad;
-        dReal hip_hi_stop = +50.0*deg2rad;
-        dReal foot_lo_stop = -160.0*deg2rad;
-        dReal foot_hi_stop =   +0.0*deg2rad;
+        // n.b. these are relative to the intial angle of the joint.
+        // For hips, the initial angle is 90.
+        // For feet, the initial amgle is 180.
+        dReal hip_lo_stop = -45.0*deg2rad;    // i.e.  45 degrees
+        dReal hip_hi_stop = +50.0*deg2rad;    // i.e. 140 degrees
+        dReal foot_lo_stop = -130.0*deg2rad;  // i.e.  50 degrees
+        dReal foot_hi_stop =   +0.0*deg2rad;  // i.e. 180 degrees
         if( rotateZ ){
             dReal tmp = hip_lo_stop;
             hip_lo_stop = -hip_hi_stop;
@@ -345,6 +348,7 @@ public:
         dReal scale = 5.0; // This should be roughly
         dReal w = tanh(delta_theta/scale)*max_servo_velocity*max_servo_velocity_scale; // max_servo_angular_velocity = pi radians per 0.5 sec
         if( joint_name[0] =='B'  ) w = -w;
+//        _DBG_ << joint_name << ":: theta="<< theta << " theta_curr=" << theta_curr << " w=" << w << std::endl;
         dJointSetHingeParam(joints[joint_name], dParamFMax, maxServoTorque);
         dJointSetHingeParam (joints[joint_name], dParamVel, w);
 
