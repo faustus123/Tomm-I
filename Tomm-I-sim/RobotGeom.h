@@ -610,8 +610,7 @@ public:
 
         // Get angles of all servos
         for(auto p : joints ){
-            dReal theta_deg = rad2deg*dJointGetHingeAngle( p.second );
-            vals[p.first] = theta_deg;
+            vals[p.first] = GetJointAngle(p.first);
         }
     }
 
