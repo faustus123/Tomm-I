@@ -63,18 +63,23 @@ def arduino_state_read_thread():
 
 	ser = serial.Serial(
         port='/dev/ttyS0', #Replace ttyS0 with ttyAM0 for Pi1,Pi2,Pi0
-        baudrate = 9600,
+        baudrate = 115200,
+        #baudrate = 9600,
         parity=serial.PARITY_NONE,
         stopbits=serial.STOPBITS_ONE,
         bytesize=serial.EIGHTBITS,
         timeout=1)
 
 	ser.reset_input_buffer()
+	last_time = time.time()
 	while not Done:
+        
 		try:
 			data = ser.readline().decode('utf-8').strip()
 			arduino_state = json.loads(data)
-			print( arduino_state )
+			if (time.time()-last_time) >= 1.0 :
+				print( arduino_state )
+				last_time = time.time()
 		except:
 			pass
 
@@ -85,6 +90,7 @@ def arduino_state_read_thread():
 def onboard_display_update_thread():
 	global raspi_status
 	global arduino_state
+	global draw, disp, width, height
 
 	while not Done:
 		# Draw a black filled box to clear the image.
