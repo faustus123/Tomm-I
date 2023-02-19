@@ -168,7 +168,7 @@ def arduino_state_read_thread():
         try:
             data = ser.readline().decode('utf-8').strip()
             arduino_state = json.loads(data)
-            if (time.time()-last_time) >= 0.25 :
+            if (time.time()-last_time) >= 0.1 :
                 update_labels()
                 last_time = time.time()
         except:
@@ -184,7 +184,7 @@ def update_labels():
     global metadata_items
     global orientation_items
     
-    print( arduino_state )
+    #print( arduino_state )
     
     LABEL['battery_voltage'].config( text='{}V'.format(arduino_state['battery_voltage']), width=6, bg='white', fg='green')
     LABEL['battery_percent'].config( text='({}%)'.format(arduino_state['battery_percent']), width=8, bg='white', fg='blue')

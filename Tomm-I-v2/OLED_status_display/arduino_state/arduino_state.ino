@@ -10,7 +10,10 @@ float Vfull = 1.125*Vnominal*0.98; // 0.98 is to give some head room for full
 float Vempty = 0.8*Vnominal;
 
 unsigned long last_time; // updated to millis() every iteration of loop()
+unsigned long last_print_time = 0; // time in millis since last printed to serial monitor
 unsigned int last_data_size = 0;
+
+float last_distance_cm = -1.0;
 
 void MPU6050_setup();
 void calculate_IMU_error();
@@ -48,9 +51,11 @@ void loop() {
   String analogInputs_str;
   String battery_str;
   String mpu_str;
+  String dist_str;
   GetAnalogInputsState(analogInputs_str);
   GetBatteryState(battery_str);
   GetMPU6050State(mpu_str);
+  GetHCSR04State(dist_str);
 
   unsigned long device_read_time_ms = millis() - now; // how long did it take to read all devices
 
@@ -63,6 +68,7 @@ void loop() {
   json_str += String(", \"last_data_size\":") + last_data_size; // bytes in last message sent
   json_str += battery_str;
   json_str += mpu_str;
+  json_str += dist_str;
   json_str += analogInputs_str;
   json_str += String("}");
 
@@ -70,7 +76,13 @@ void loop() {
   
   // Write serial1 (not USB which is mirrored to serial 0!)
   Serial1.println(json_str);
-  //Serial.println(json_str);
+
+  // Print to the main serial device once every two second2
+  // so it can be monitored via the serial monitor
+  if( (now - last_print_time) > 2000 ){
+    // Serial.println(json_str);   // n.b. this can add 300ms to the loop time!
+    last_print_time = now;
+  }
 
   //delay(500);
  }
@@ -130,6 +142,48 @@ void GetBatteryState(String &str)
   dtostrf(percent_full, 5, 1, Percentstr);
   str = String(", \"battery_voltage\":") + Vstr;
   str += String(", \"battery_percent\":") + Percentstr;
+}
+
+//-------------------------------
+// GetHCSR04State
+//-------------------------------
+void GetHCSR04State(String &str) {
+  // This is based on information in the description here:
+  // https://www.adafruit.com/product/4742
+  //
+  // I later found some example code here:
+  // http://www.mikroelec.com/product/2182/rcwl-9610-ultrasonic-sensor-2022-version-3-to-5v-ultrasonic-distance-module-replace-for-hc-sr04-with
+  //
+  // Note that in the comments of the code at the second site
+  // they says we need to wait at least 30ms between readings
+  // and wait at least 150ms for the return signal. That blows
+  // our timing budget. The use case here is for distances that
+  // aren't more than about 40cm => 0.40/343*1000 = 1.1ms.
+  // The maximum distance the device can measure is ~400cm which
+  // would correspond to ~11ms so I don't know where they are
+  // getting 150ms from. I do know that if I try reading the device
+  // when no response is recieved, it takes about 100ms extra to
+  // complete the read.
+  const int HCSR04 = 0x57; // MPU6050 I2C address
+  Wire.beginTransmission(HCSR04);
+  Wire.write(0x01); // Send pulse
+  Wire.endTransmission(false);
+  delay(2);
+  Wire.requestFrom(HCSR04, 3, true); // Read 3 bytes
+  // n.b. Because other devices use the I2C bus, we can't
+  // leave other bytes in the Wire buffer. Thus, if there
+  // is no return signal then we have to wait for the
+  // device to timeout and return 3 values of 0XFF.
+  unsigned long byte0 = Wire.read() & 0xFF;
+  unsigned long byte1 = Wire.read() & 0xFF;
+  unsigned long byte2 = Wire.read() & 0xFF;
+  unsigned long dist = (byte0 << 16) + (byte1 << 8) + (byte2 << 0);
+  if( (dist != 0x00FFFFFF) && (dist != 0x00000000) ){
+    last_distance_cm = dist / 10000.0;
+  }
+  if( last_distance_cm > 400.0 ) last_distance_cm = -1;
+  str = String(", \"dist_front\":") + last_distance_cm;
+
 }
 
 
