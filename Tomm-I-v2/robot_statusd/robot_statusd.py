@@ -13,13 +13,15 @@
 #    most recent JSON status string to at high rate. This can be
 #    used by one other program that consumes the information. That
 #    program may then send messages back to the arduino directly
-#    via the /dev/serial1 device.
+#    via the /dev/serial1 device to complete a full control loop.
 #
 # 3. It sends the JSON string to a zeroMQ PUB-SUB socket at a
 #    limited rate. This is intended for the GUI monitor. Being
 #    PUB-SUB also allows for other potential programs to access
 #    the robot status information.
 #
+# Use the RobotStatus.py script to launch a GUI that monitors
+# telemetry from the robot.
 
 import os
 import zmq
@@ -200,15 +202,39 @@ def pipe_update_thread():
 # zmq_update_thread
 #------------------------------
 def zmq_update_thread():
+    global Done
     global arduino_state_json
+    global arduino_state
+    global port
+    
+    # Minimum time to sleep between publishes
+    publish_delay = 0.2
+
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    socket.bind("tcp://*:%s" % port)
+    
+    print("Publishing on port " + port + " ...")
+    
+    last_millis = 0
+    while not Done:
+        if 'millis' in arduino_state.keys() and arduino_state['millis'] != last_millis:
+            socket.send_string(arduino_state_json)
+            last_millis = arduino_state['millis']
+            time.sleep( publish_delay )
+            
 
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#
+# Make list of threads to run
+#
 all_threads = []
 all_threads.append( {'name':'arduino'  , 'target':arduino_state_read_thread,     'proc':None})
 all_threads.append( {'name':'display'  , 'target':onboard_display_update_thread, 'proc':None})
 all_threads.append( {'name':'pipe'     , 'target':pipe_update_thread,            'proc':None})
 all_threads.append( {'name':'zmq'      , 'target':zmq_update_thread,             'proc':None})
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 #------------------------------
@@ -237,11 +263,6 @@ def StopAllThreads():
 
 #=============================================================================
 
-context = zmq.Context()
-socket = context.socket(zmq.REP)
-socket.bind("tcp://*:%s" % port)
-
-print("Listening on port " + port + " ...")
 
 StartAllThreads()
 
@@ -249,23 +270,24 @@ StartAllThreads()
 # Server loop
 while not Done:
     #  Wait for next request from client
-    command = socket.recv_string()
-    print("Received request: " + command)
-    if command.startswith('Hello'):
-        mess = "Hola'!"
+    # command = socket.recv_string()
+    # print("Received request: " + command)
+    # if command.startswith('Hello'):
+    #     mess = "Hola'!"
 
-    elif command.startswith('quit'):
-        Done = True
-        mess = "Quitting ..."
+    # elif command.startswith('quit'):
+    #     Done = True
+    #     mess = "Quitting ..."
 
-    elif command.startswith('get_raspi_status'):
-        mess = '\n'.join(raspi_status)
+    # elif command.startswith('get_raspi_status'):
+    #     mess = '\n'.join(raspi_status)
 
-    else:
-        mess = 'Unknown command: ' + command
+    # else:
+    #     mess = 'Unknown command: ' + command
     
-    print(mess)
-    socket.send_string(mess)
+    # print(mess)
+    # socket.send_string(mess)
+    time.sleep(1.0)
 
 # Cleanup
 StopAllThreads();
