@@ -1,4 +1,6 @@
 import os
+import select
+import socket
 import time
 import serial
 import sys
@@ -152,27 +154,43 @@ def arduino_state_read_thread():
     global arduino_state
     global Done
 
-    ser = serial.Serial(
-        port='/dev/ttyS0', #Replace ttyS0 with ttyAM0 for Pi1,Pi2,Pi0
-        baudrate = 115200,
-        #baudrate = 9600,
-        parity=serial.PARITY_NONE,
-        stopbits=serial.STOPBITS_ONE,
-        bytesize=serial.EIGHTBITS,
-        timeout=1)
+    # ser = serial.Serial(
+    #     port='/dev/ttyS0', #Replace ttyS0 with ttyAM0 for Pi1,Pi2,Pi0
+    #     baudrate = 115200,
+    #     #baudrate = 9600,
+    #     parity=serial.PARITY_NONE,
+    #     stopbits=serial.STOPBITS_ONE,
+    #     bytesize=serial.EIGHTBITS,
+    #     timeout=1)
 
-    ser.reset_input_buffer()
+    # ser.reset_input_buffer()
+    
+    path = "/tmp/robot_status"
+    fifo_fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK )
+    if fifo_fd >= 0:
+        print('Opened fifo: {}'.format(path))    
+    else:
+        print('Unable to open fifo: {}'.format(path))
+        Done = True
+        return
+
+    fifo = os.fdopen(fifo_fd)
+
     last_time = time.time()
-    while not Done:
+    while fifo and not Done:
         
         try:
-            data = ser.readline().decode('utf-8').strip()
-            arduino_state = json.loads(data)
+            #data = ser.readline().decode('utf-8').strip()
+            ready = select.select([fifo_fd], [], [], 1)
+            if ready[0] :
+                data = fifo.readline().strip()
+                if len(data)>2 : arduino_state = json.loads(data)
             if (time.time()-last_time) >= 0.1 :
-                update_labels()
+                if not Done : update_labels()
                 last_time = time.time()
-        except:
-            pass
+        except Exception as e:
+            print(e)
+    print("arduino_state_read_thread stopping")
 
 #------------------------------
 # update_labels
@@ -185,6 +203,9 @@ def update_labels():
     global orientation_items
     
     #print( arduino_state )
+
+    # dummy check that at least some data is in arduino_state
+    if len(arduino_state.keys()) < 2 : return
     
     LABEL['battery_voltage'].config( text='{}V'.format(arduino_state['battery_voltage']), width=6, bg='white', fg='green')
     LABEL['battery_percent'].config( text='({}%)'.format(arduino_state['battery_percent']), width=8, bg='white', fg='blue')
@@ -220,6 +241,7 @@ def StopAllThreads():
     for t in all_threads:
         print('  Joining thread for '+t['name'])
         t['proc'].join()
+    print("All threads stopped.")
 
 #------------------------------
 # Quit
