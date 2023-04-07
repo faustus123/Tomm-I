@@ -119,13 +119,13 @@ def stand():
     global Done
     global cycle_time
     
-    all = {'FR1':140, 'FR2':90, 'BR1':50, 'BR2':90, 'FL1':140, 'FL2':90, 'BL1':50, 'BL2':90}
+    all = {'FR1':40, 'FR2':90, 'BR1':140, 'BR2':65, 'FL1':140, 'FL2':30, 'BL1':20, 'BL2':90}
 
     print('Setting all servos to 90 degrees ...')
     for s,a in all.items():
         servo = pca.servo[servo_map[s]]
         servo.angle = a
-        time.sleep(0.5)
+        time.sleep(0.75)
         
     time.sleep(1)
     print('complete.')
