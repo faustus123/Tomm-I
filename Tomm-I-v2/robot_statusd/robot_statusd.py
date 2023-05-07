@@ -47,6 +47,7 @@ import RPi.GPIO as GPIO
 
 port = "71400"  # For zmq commands
 Done = False
+ShutdownIntiated = False;  # Gets set to true when a shutdown is initiated due to low battery
 
 
 raspi_status = []
@@ -81,6 +82,7 @@ arduino_state = {}
 def arduino_state_read_thread():
     global arduino_state_json
     global arduino_state
+    global Done
 
     ser = serial.Serial(
         port='/dev/ttyS0', #Replace ttyS0 with ttyAM0 for Pi1,Pi2,Pi0
@@ -108,6 +110,7 @@ def onboard_display_update_thread():
     global raspi_status
     global arduino_state
     global draw, disp, width, height
+    global Done
 
     while not Done:
         # Draw a black filled box to clear the image.
@@ -151,6 +154,50 @@ def onboard_display_update_thread():
         disp.image(image)
         disp.display()
         time.sleep(1.)
+        
+        if float(arduino_state["battery_percent"]) < 90.0: Shutdown()
+
+#------------------------------
+# Shutdown
+#------------------------------
+def Shutdown():
+    
+    # This is called by the onboard_display_update_thread when the battery
+    # level has dropped too low and we need to shut the robot down. This
+    # is primarily to save the SD card from getting corrupted.
+    global raspi_status
+    global arduino_state
+    global draw, disp, width, height
+    global Done
+    
+    cmd = "sudo shutdown --poweroff +1"   # Shutdown in 1 min.
+    subprocess.run(cmd, shell = True )
+
+    start_time = time.time()
+    while (time.time() - start_time)<=60:
+
+        # Draw a black filled box to clear the image.
+        draw.rectangle((0,0,width,height), outline=0, fill=0)
+        
+        raspi_status = ['*** WARNING!!! ***']
+        raspi_status.append('low battery: {}%'.format( arduino_state["battery_percent"] ))
+        raspi_status.append(' ')
+        raspi_status.append('SHUTTING DOWN!')
+        raspi_status.append(' ')
+        raspi_status.append('{} seconds remaining'.format(int(60 - (time.time() - start_time))))
+        
+         # Write all lines of text.
+        x=0
+        y=top
+        for line in raspi_status:
+            draw.text((x, y),  line, font=font, fill=255)
+            y += 8
+
+        # Display image.
+        disp.image(image)
+        disp.display()
+        time.sleep(1.0)
+    Done = True
 
 #------------------------------
 # pipe_update_thread
