@@ -155,7 +155,8 @@ def onboard_display_update_thread():
         disp.display()
         time.sleep(1.)
         
-        if float(arduino_state["battery_percent"]) < 90.0: Shutdown()
+        # Tell raspberry pi to power down if battery level drops below 5%
+        if float(arduino_state["battery_percent"]) < 5.0: Shutdown()
 
 #------------------------------
 # Shutdown
@@ -170,7 +171,7 @@ def Shutdown():
     global draw, disp, width, height
     global Done
     
-    cmd = "sudo shutdown --poweroff +1"   # Shutdown in 1 min.
+    cmd = "sudo shutdown --poweroff +1 Battery dropped below 5%!!"   # Shutdown in 1 min.
     subprocess.run(cmd, shell = True )
 
     start_time = time.time()
