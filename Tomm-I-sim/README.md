@@ -33,9 +33,9 @@ place at the end.
 ```
 cd extern
 wget https://bitbucket.org/odedevs/ode/downloads/ode-0.16.2.tar.gz
-tar xzf ode-0.16.2.tar.gz
-setenv ODE_HOME $PWD/ode-0.16.2
-cd ${ODE_HOME}/build
+tar xzf ode-0.16.3.tar.gz
+setenv ODE_HOME "$PWD/ode-0.16.3"
+cd "${ODE_HOME}/build"
 cmake -DCMAKE_INSTALL_PREFIX=.. -DBUILD_SHARED_LIBS=0 ..
 make -j4 install
 cp libdrawstuff.* ../lib
@@ -47,16 +47,14 @@ n.b. make sure your ODE_HOME environment variable is set to point
 to your ODE library build. 
 ```
 cd Tomm-I-sim  # Assuming you are in the top-level Tomm-I directory
-mkdir build
-cd build
-cmake ..
-make -j4
+cmake -S . -B build
+cmake --build build -- -j8
 ```
 
 Finally, to run the simulation, do the following. Note this assumes
 you are still in the build directory.
 ```
-./Tomm-I-sim
+./build/Tomm-I-sim
 (hit ctl-C in terminal window to quit)
 ```
 If you have some issue with it finding the textures, you can add an
