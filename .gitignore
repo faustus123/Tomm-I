@@ -1,3 +1,5 @@
 Tomm-I-v2/Firmware/.vscode
 Tomm-I-sim/extern/*gz
 Tomm-I-sim/extern/ode-*
+extern/*gz
+extern/ode-*
