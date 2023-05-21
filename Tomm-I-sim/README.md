@@ -1,18 +1,15 @@
 # Tomm-I
 
 Here are instructions for building the Tomm-I simulation. The
-instructions below were developed under Mac OS X 10.15.7 using
-XCode 12.3.
+instructions below were developed under Mac OS X 13.2 using
+XCode 14.2.
 
 This relies on the Open Dynamics Engine (ODE) library. This is
 freely available and designed to model physics for some basic
 shapes and constraints for the purposes of simulation.  
 
-Note that these instructions immediately violate two of the ODE
-author reccommendations:
-
-1. Do out-of-source builds
-2. Do not use the drawStuff library
+Note that these instructions violate the ODE author recommendation
+to not use the drawStuff library
 
 The drawStuff library comes with ODE but is intended to be
 rudimentary for the purposes of their demo programs. I believe
@@ -23,7 +20,7 @@ The way I have this set up on my system is that the ODE library
 is built inside of the "extern" subdirectory of the Tomm-I
 source. Thus, the first thing to do is clone the Tomm-I source:
 ```
-git clone --recurse-submodules https://github.com/faustus123/Tomm-I
+git clone https://github.com/faustus123/Tomm-I
 cd Tomm-I
 ```
 
@@ -44,23 +41,22 @@ cd ../../../  # move back to Tomm-I directory
 
 Here are instructions for building the Tomm-I simulation code. 
 n.b. make sure your ODE_HOME environment variable is set to point
-to your ODE library build. 
+to your ODE library build. These assume you are currently in the
+parent directory of the Tomm-I source code directory.
 ```
-cd Tomm-I-sim  # Assuming you are in the top-level Tomm-I directory
-cmake -S . -B build
-cmake --build build -- -j8
+cmake -S Tomm-I/Tomm-I-sim -B build-Tomm-I-sim
+cmake --build build-Tomm-I-sim -- -j8
 ```
 
-Finally, to run the simulation, do the following. Note this assumes
-you are still in the build directory.
+Finally, to run the simulation, do the following. 
 ```
-./build/Tomm-I-sim
+./build-Tomm-I-sim/Tomm-I-sim
 (hit ctl-C in terminal window to quit)
 ```
 If you have some issue with it finding the textures, you can add an
 extra argument to tell it where they are:
 ```
-./Tomm-I-sim -texturepath $ODE_HOME/drawstuff/textures
+./build-Tomm-I-sim/Tomm-I-sim -texturepath $ODE_HOME/drawstuff/textures
 ```
 
 ## Python
@@ -69,7 +65,7 @@ the python module (TommIsim.so) gets installed to your PYTHONPATH.
 e.g. (assuming you are in the Tomm-I/Tomm-I-sim directory)
 
 ```
-setenv PYTHONPATH ${PWD}/python_modules
+setenv PYTHONPATH ${PWD}/build-Tomm-I-sim/
 python3 example.py
 ```
 
