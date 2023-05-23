@@ -32,10 +32,10 @@ def checkStatus(motor):
     global keys
     status = TommIsim.GetStatus()
     margin = 0.2
-    for i in range(len(keys)):
-        key = keys[i]
-    if status[key] > motor[key] + margin or status[key] < motor[key] - margin:
-        return False, i
+    for key in motor.keys():
+        if key not in status.keys(): continue
+        if abs(motor[key] - status[key]) > margin:
+            return False, i
 
     return True, -1
     
@@ -112,7 +112,7 @@ def MyPythonCallback():
                 motor = {'BL_foot': 120, 'BL_hip': 120, 'BR_foot': 120, 'BR_hip': 120, 'FL_foot': 120, 'FL_hip': 120, 'FR_foot': 120, 'FR_hip': 120}
             else:
                 motor = json.loads(message)
-                for key in keys:
+                for key in motor.keys():
                     if "foot" in key: # or "FR_" in key:
                         motor[key] = 130 + motor[key]*10
                     else:

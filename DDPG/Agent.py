@@ -69,7 +69,8 @@ class Agent:
     def choose_action(self, observation, evaluate=False):
         state = tf.convert_to_tensor([observation], dtype=tf.float32)
         actions = self.actor(state)
-        print("Model output: ", actions)
+        #sactions = ["{:+.2f} ".format(v) for v in actions[0]]
+        #print("Model output: {} x={:.3f} y={:.3f} pitch={:.3f}".format(sactions, observation[0], observation[1], observation[3]))
         # for i in range(8):
         #     tf.print(actions[0][i])
         if not evaluate:

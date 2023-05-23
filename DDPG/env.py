@@ -34,8 +34,11 @@ reward_range = [0, -400]
 def convertToDict(action):
     keys = ["FR_hip", "FL_hip", "BR_hip", "BL_hip", "FR_foot", "FL_foot", "BR_foot", "BL_foot"]
     motor = {}
-    for i in range(len(keys)):
-        motor[keys[i]] = float(action[i])
+    if len(keys) != len(action):
+        print("WARNING in env.py:converToDict:  len(keys)!=len(action)   {}!={}".format(len(keys),len(action)))
+    else:
+        for i in range(len(keys)):
+            motor[keys[i]] = float(action[i])
     return motor
 
 def getObservations(status):
@@ -58,8 +61,13 @@ def step(action, prev_x=0, prev_y=0, prev_yaw=0):
     msg = sock.recv().decode('utf-8')
     status = json.loads(msg)
     obs = getObservations(status)
-    reward = (status['x'] - prev_x-0.2)*20 - abs(status['y']-prev_y)*2 #- max(0, abs(status['roll'])-0.01)*10 - max(0, abs(status['yaw'])-0.01)*10 - max(0, abs(status['pitch'])-0.01)*10
-    # print(status['pitch'], status['roll'])
+    if isinstance(action, dict):
+        sactions = ["{:+.2f} ".format(float(v)) for v in list(action.values())[:8]]
+        print("Model output: {} x={:.3f} y={:.3f} yaw={:.3f}".format(sactions, status['x'], status['y'], status['yaw']))
+    #reward = (status['x'] - prev_x-0.2)*20 - abs(status['y']-prev_y)*2 #- max(0, abs(status['roll'])-0.01)*10 - max(0, abs(status['yaw'])-0.01)*10 - max(0, abs(status['pitch'])-0.01)*10
+    reward = status['x'] - abs(status['y'])
+    #print( status )
+    #print(status['pitch'], status['roll'])
     done = False
     count += 1
     if count > 2000:

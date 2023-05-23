@@ -12,13 +12,13 @@ if __name__ == '__main__':
     # env = gym.make('Pendulum-v0')
     agent = Agent(input_dims=env.observation_space.shape, env=env,
             n_actions=env.action_space.shape)
-    n_games = 25000
+    n_games = 3
 
     figure_file = 'pendulum.png'
 
     best_score = env.reward_range[0]
     score_history = []
-    load_checkpoint = False
+    load_checkpoint = True
 
     if load_checkpoint:
         n_steps = 0
@@ -58,6 +58,7 @@ if __name__ == '__main__':
 
         score_history.append(score)
         avg_score = np.mean(score_history[-100:])
+        print("avg_score={}".format(avg_score))
 
         if avg_score > best_score:
             best_score = avg_score
@@ -68,7 +69,7 @@ if __name__ == '__main__':
             observation = env.reset()
             total_reward = 0
             for j in range(200):
-                print(" ... Evaluating ... ")
+                #print(" ... Evaluating ... ")
                 action = agent.choose_action(observation, True)
                 observation_, reward, done, info = env.step(action, prev_x, prev_y, prev_yaw)
                 prev_x = info[0]
