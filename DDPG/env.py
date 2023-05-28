@@ -1,4 +1,4 @@
-# Author: Kishansingh Rajput
+# Author: Kishansingh Rajput, David Lawrence
 # Script: Interface to the environment
 
 
@@ -12,6 +12,9 @@ context = zmq.Context()
 sock = context.socket(zmq.REQ)
 sock.connect("tcp://127.0.0.1:5678")
 action = [120, 120, 120, 120, 120, 120, 120, 120]
+
+# Global counter to keep track of how many times step is called since last reset.
+count = 0
 
 class action_space_class:
     def __init__(self):
@@ -35,6 +38,7 @@ def convertToDict(action):
     keys = ["FR_hip", "FL_hip", "BR_hip", "BL_hip", "FR_foot", "FL_foot", "BR_foot", "BL_foot"]
     motor = {}
     if len(keys) != len(action):
+        #breakpoint()
         print("WARNING in env.py:converToDict:  len(keys)!=len(action)   {}!={}".format(len(keys),len(action)))
     else:
         for i in range(len(keys)):
@@ -50,7 +54,6 @@ def getObservations(status):
         obs.append(status[key])
     return obs
 
-count = 0
 def step(action, prev_x=0, prev_y=0, prev_yaw=0):
     global count
     if not isinstance(action, str):
@@ -61,20 +64,20 @@ def step(action, prev_x=0, prev_y=0, prev_yaw=0):
     msg = sock.recv().decode('utf-8')
     status = json.loads(msg)
     obs = getObservations(status)
+    #reward = (status['x'] - prev_x-0.2)*20 - abs(status['y']-prev_y)*2 #- max(0, abs(status['roll'])-0.01)*10 - max(0, abs(status['yaw'])-0.01)*10 - max(0, abs(status['pitch'])-0.01)*10
+    reward = status['x'] - 0.25*abs(status['y'])
     if isinstance(action, dict):
         sactions = ["{:+.2f} ".format(float(v)) for v in list(action.values())[:8]]
-        print("Model output: {} x={:.3f} y={:.3f} yaw={:.3f}".format(sactions, status['x'], status['y'], status['yaw']))
-    #reward = (status['x'] - prev_x-0.2)*20 - abs(status['y']-prev_y)*2 #- max(0, abs(status['roll'])-0.01)*10 - max(0, abs(status['yaw'])-0.01)*10 - max(0, abs(status['pitch'])-0.01)*10
-    reward = status['x'] - abs(status['y'])
-    #print( status )
-    #print(status['pitch'], status['roll'])
+        print("Model output: {} x={:.3f} y={:.3f} yaw={:.3f} reward={:.3f}".format(sactions, status['x'], status['y'], status['yaw'], reward))
     done = False
     count += 1
     if count > 2000:
         done = True
+        print("Greater than 2000 calls to env.step(). Ending current game ...")
     if status['z'] < 0.015:
         done = True
         reward -= 500
+        print("Robot z indicates robot fell over. Ending current game ...")
         # if status['z'] == -10:
         #     reward += 10
     axis = [status['x'], status['y'], status['z'], status['yaw']]

@@ -32,7 +32,7 @@ def checkStatus(motor):
     global keys
     status = TommIsim.GetStatus()
     margin = 0.2
-    for key in motor.keys():
+    for i,key in enumerate(motor.keys()):
         if key not in status.keys(): continue
         if abs(motor[key] - status[key]) > margin:
             return False, i
@@ -137,7 +137,7 @@ def MyPythonCallback():
         TommIsim.SetMotors(motor)
 
 #======================================================================
-TommIsim.SetRunRealTime( True )
+TommIsim.SetRunRealTime( False )
 # TommIsim.SetUsePreprogrammedActions( True ) # comment this line to turn off the pre-programmed sequence used for the initial video
 TommIsim.Setup()
 TommIsim.RegisterCallback(MyPythonCallback)

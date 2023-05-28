@@ -1,6 +1,7 @@
 # Author: Kishansingh Rajput
 # Script: RL Agent
 
+import os
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
@@ -52,36 +53,93 @@ class Agent:
     def remember(self, state, action, reward, new_state, done):
         self.memory.store_transition(state, action, reward, new_state, done)
 
+    #--------------------------------------
+    # save_one_model
+    #
+    # This will save the model using the TF saved model format
+    # and the model.model_dir path to the model. It should be called
+    # with either an ActorNetwork or CriticNetwork model as the
+    # argument. 
+    def save_one_model(self, model):
+        print("  saving model to: {}".format(model.model_dir))
+        model.save(model.model_dir)
+
+    #--------------------------------------
+    # save_models
+    #
+    # Save all 4 models in TF saved model format
     def save_models(self):
         print('... saving models ...')
-        self.actor.save_weights(self.actor.checkpoint_file)
-        self.target_actor.save_weights(self.target_actor.checkpoint_file)
-        self.critic.save_weights(self.critic.checkpoint_file)
-        self.target_critic.save_weights(self.target_critic.checkpoint_file)
+        self.save_one_model(self.actor)
+        self.save_one_model(self.target_actor)
+        self.save_one_model(self.critic)
+        self.save_one_model(self.target_critic)
+        # self.actor.save(self.actor.model_dir)
+        # self.target_actor.save(self.target_actor.model_dir)
+        # self.critic.save(self.critic.model_dir)
+        # self.target_critic.save(self.target_critic.model_dir)
+    
+    #--------------------------------------
+    # load_one_model
+    #
+    # This will load the model assuming the TF saved model format
+    # and the model.model_dir path to the model. It should be called
+    # with either an ActorNetwork or CriticNetwork model as the
+    # argument. The model layer architecture is assumed to already
+    # be defined (which it is in the constructor in networks.py).
+    # It would match the architecture of the saved model.
+    def load_one_model(self, model):
+        if not os.path.exists(model.model_dir):
+            print("  no model to load so will train from scratch (missing {})".format(model.model_dir))
+            return
 
+        print("  loading model from: {}".format(model.model_dir))
+        loaded_model = tf.keras.models.load_model(model.model_dir)
+        print("--- LOADED MODEL ---")
+        loaded_model.summary()
+        print("--- BUILT MODEL ---")
+        model.build()
+        model.summary()
+        model.set_weights(loaded_model.get_weights())
+        model.compile(
+            optimizer=loaded_model.optimizer,
+            loss=loaded_model.loss,
+            metrics=loaded_model.metrics,
+        )
+        return model
+
+    #--------------------------------------
+    # load_models
+    #
+    # Load all 4 models from saved versions
     def load_models(self):
         print('... loading models ...')
-        self.actor.load_weights(self.actor.checkpoint_file)
-        self.target_actor.load_weights(self.target_actor.checkpoint_file)
-        self.critic.load_weights(self.critic.checkpoint_file)
-        self.target_critic.load_weights(self.target_critic.checkpoint_file)
+        self.load_one_model(self.actor)
+        self.load_one_model(self.target_actor)
+        self.load_one_model(self.critic)
+        self.load_one_model(self.target_critic)
+        # self.actor.load_weights(self.actor.checkpoint_file)
+        # self.target_actor.load_weights(self.target_actor.checkpoint_file)
+        # self.critic.load_weights(self.critic.model_dir)
+        # self.target_critic.load_weights(self.target_critic.model_dir)
 
-    def choose_action(self, observation, evaluate=False):
+    #--------------------------------------
+    # choose_action
+    #
+    def choose_action(self, observation, add_noise=True):
         state = tf.convert_to_tensor([observation], dtype=tf.float32)
         actions = self.actor(state)
         #sactions = ["{:+.2f} ".format(v) for v in actions[0]]
         #print("Model output: {} x={:.3f} y={:.3f} pitch={:.3f}".format(sactions, observation[0], observation[1], observation[3]))
         # for i in range(8):
         #     tf.print(actions[0][i])
-        if not evaluate:
+        if add_noise:
             actions += tf.random.normal(shape=[self.n_actions],
                     mean=0.0, stddev=self.noise)
-        # note that if the environment has an action > 1, we have to multiply by
-        # max action at some point
-        
-        # actions1 = 120 + actions[:4]*20
-        # actions2 = 120 + actions[4:]*20
-        # actions = tf.concat([actions1, actions2], axis=0)
+       
+        # Disable back legs for now
+        mask = tf.constant([1., 1., 0., 0., 1., 1., 0., 0.])
+        actions = tf.multiply(actions, mask)
         
         actions = tf.clip_by_value(actions, self.min_action, self.max_action)
         # tf.print(actions)
