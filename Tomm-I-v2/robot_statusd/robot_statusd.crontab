@@ -1,0 +1,11 @@
+
+#
+# This is an example crontab that will automatically start the robot_statusd.py
+# program upon reboot.
+#
+# Install this in the pi account with:
+#
+#   crontab robot_statusd.crontab
+#
+
+@reboot /home/pi/venv/bin/python3 /home/pi/Tomm-I/Tomm-I-v2/robot_statusd/robot_statusd.py

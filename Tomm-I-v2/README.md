@@ -59,9 +59,9 @@ sudo apt install -y arduino-builder
 python3 -m venv venv
 source venv/bin/activate
 pip install platformio
-pip install Adafruit_SSD1306
+pip install adafruit-circuitpython-ssd1306 pillow
+pip install adafruit-circuitpython-servokit
 pip install zmq
-pip install Pillow
 pip install rpi.gpio
 
 # Download the Tomm-I software
@@ -72,3 +72,21 @@ cd Tomm-I/Tomm-I-v2/Firmware
 platformio run --target upload
 ~~~
 
+### Step 4: Automatically start robot status daemon
+
+The robot status daemon is what continually reads the robot state from
+the arduino mega into the raspberry pi and then makes it available to
+other programs running on the pi. It is also responsible for updating 
+the onboard display on the robot so you can read the IP address, battery
+life, etc... without having to connect it to another device.
+
+Have the daemon start automatically upon reboot by placing an `@reboot`
+line in the crontab of the default account. An example crontab that does
+this is in the robot_statusd directory and can be installed like this:
+
+~~~bash
+crontab ~/Tomm-I/Tomm-I-v2/robot_statusd/robot_statusd.crontab
+~~~
+
+Test this by rebooting the rpi and seeing that the display (eventually)
+comes up.
