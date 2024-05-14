@@ -31,10 +31,12 @@ import subprocess
 import threading
 import json
 
-import Adafruit_SSD1306
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
+import board
+import digitalio
+import busio
+from PIL import Image, ImageDraw, ImageFont
+import adafruit_ssd1306
+
 
 
 # Reduces the jitter on the servos
@@ -54,25 +56,22 @@ raspi_status = []
 
 
 # Initialize onboard display
-RST = None     # on the PiOLED this pin isnt used
-DC = 23
-SPI_PORT = 0
-SPI_DEVICE = 0
-disp = Adafruit_SSD1306.SSD1306_128_64(rst=RST) # 128x64 display with hardware I2C:
-disp.begin()
-disp.clear()
-disp.display()
-padding=-2
-top = padding
+i2c = board.I2C()
+disp = adafruit_ssd1306.SSD1306_I2C(128, 64, i2c, addr=0x3C)  # Update the I2C address if needed
+disp.fill(0)
+disp.show()
 width = disp.width
 height = disp.height
-image = Image.new('1', (width, height)) # Create blank image for drawing. '1' for 1-bit color.
-draw = ImageDraw.Draw(image) # Get drawing object to draw on image.
-draw.rectangle((0,0,width,height), outline=0, fill=0) # Clear screen
-font = ImageFont.load_default() # Load default font.
-draw.text((10, top+8),  '... starting up ....', font=font, fill=255)
+image = Image.new('1', (width, height))  # Create blank image for drawing. '1' for 1-bit color.
+draw = ImageDraw.Draw(image)  # Get drawing object to draw on image.
+padding = -2
+top = padding
+draw.rectangle((0, 0, width, height), outline=0, fill=0)
+font = ImageFont.load_default()
+draw.text((10, top + 8), '... starting up ....', font=font, fill=255)
 disp.image(image)
-disp.display()
+disp.show()
+
 
 arduino_state = {}
 
@@ -146,17 +145,19 @@ def onboard_display_update_thread():
         # Write all lines of text.
         x=0
         y=top
+        # disp.fill(0)
         for line in raspi_status:
             draw.text((x, y),  line, font=font, fill=255)
-            y += 8
+            y += 12
 
         # Display image.
         disp.image(image)
-        disp.display()
+        disp.show()
         time.sleep(1.)
         
         # Tell raspberry pi to power down if battery level drops below 5%
-        if float(arduino_state["battery_percent"]) < 5.0: Shutdown()
+        if "battery_percent" in arduino_state:
+            if float(arduino_state["battery_percent"]) < 5.0: Shutdown()
 
 #------------------------------
 # Shutdown
