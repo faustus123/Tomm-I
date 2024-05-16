@@ -19,9 +19,13 @@ import json
 #import zmq
 from adafruit_servokit import ServoKit
 
+import tkinter as tk
+
+
 Done = False
 DataSource = "pipe"  # "zmq", "pipe", "serial"  (zmq and pipe require robot_statsd.py to be running)
 arduino_state = {}
+LABEL = {}
 servo2adc_map = {
     'BL1':'A0',
     'BL2':'A1',
@@ -44,6 +48,7 @@ servo_map = {
     'FL2':12,
     'FL1':14
       }
+metadata_items = []
 
 last_update_actuators_time = time.time()
 
@@ -59,6 +64,203 @@ pca = ServoKit(channels=16)
 for i in range(16): pca.servo[i].set_pulse_width_range(MIN_IMP[i] , MAX_IMP[i])
 
 
+#-----------------------------------
+# create_control_frame
+#-----------------------------------
+def create_control_frame(parent):
+    control_frame = tk.Frame(parent)
+    
+    # Function to create a row for a servo control
+    def create_servo_control(frame, name, row):
+        tk.Label(frame, text=name).grid(row=row, column=0, padx=5, pady=5)
+        
+        slider = tk.Scale(frame, from_=500, to=2500, orient=tk.HORIZONTAL)
+        slider.grid(row=row, column=1, columnspan=4, padx=5, pady=5)
+        
+        btn_dec_10 = tk.Button(frame, text="-10", command=lambda: adjust_servo(slider, -10))
+        btn_dec_10.grid(row=row, column=5, padx=2, pady=2)
+        
+        btn_dec_1 = tk.Button(frame, text="-1", command=lambda: adjust_servo(slider, -1))
+        btn_dec_1.grid(row=row, column=6, padx=2, pady=2)
+        
+        btn_inc_1 = tk.Button(frame, text="+1", command=lambda: adjust_servo(slider, 1))
+        btn_inc_1.grid(row=row, column=7, padx=2, pady=2)
+        
+        btn_inc_10 = tk.Button(frame, text="+10", command=lambda: adjust_servo(slider, 10))
+        btn_inc_10.grid(row=row, column=8, padx=2, pady=2)
+
+    # Function to adjust the servo value
+    def adjust_servo(slider, delta):
+        new_value = slider.get() + delta
+        new_value = max(500, min(2500, new_value))
+        slider.set(new_value)
+    
+    # Servo motor names
+    servos = ["FL1", "FL2", "FR1", "FR2", "BL1", "BL2", "BR1", "BR2"]
+    
+    for idx, servo in enumerate(servos):
+        create_servo_control(control_frame, servo, idx)
+
+    return control_frame
+
+#-----------------------------------
+# CreateGUI
+#-----------------------------------
+def CreateGUI():
+    
+    global root
+    global LABEL
+    global metadata_items
+    global orientation_items
+
+    # create main window
+    root = tk.Tk()
+    
+    # set window title
+    root.title("Robot Status")
+    
+    # System Info.
+    systeminfo_frame = tk.Frame(root)
+    
+    # Data Source
+    datasource_frame = tk.Frame(systeminfo_frame)
+    datasource_frame.grid(row=0, column=0, sticky='we')
+    datasource_title = tk.Label(datasource_frame, text="Data Source:")
+    LABEL['datasource'] = tk.Label(datasource_frame, text="----")
+    datasource_title.grid(row=0, column=0)
+    LABEL['datasource'].grid(row=0, column=1)
+
+    # Battery
+    battery_frame = tk.Frame(systeminfo_frame)
+    battery_frame.grid(row=1, column=0)
+    battery_title = tk.Label(battery_frame, text="Battery:")
+    LABEL['battery_voltage'] = tk.Label(battery_frame, text="----")
+    LABEL['battery_percent'] = tk.Label(battery_frame, text="----")
+    battery_title.grid(row=0, column=0)
+    LABEL['battery_voltage'].grid(row=0, column=1)
+    LABEL['battery_percent'].grid(row=0, column=2)
+       
+    # Metadata
+    metadata_items = ['millis', 'device_read_time_ms', 'loop_time_ms', 'last_data_size']
+    metadata_frame = tk.Frame(root, pady=5, padx=5, borderwidth=2, relief='groove')
+    metadata_title = tk.Label(metadata_frame, text="Metadata", borderwidth=2, relief='raised')
+    metadata_title.grid(row=0, column=0, columnspan=2, sticky='we')
+    row = 1
+    for m in metadata_items:
+        title = tk.Label(metadata_frame, text='{}:'.format(m), anchor='e')
+        LABEL[m] = tk.Label(metadata_frame, text="----")
+        title.grid(row=row, column=0, sticky='we')
+        LABEL[m].grid(row=row, column=1)
+        row += 1
+ 
+    # Orientation
+    orientation_items = ['yaw_front', 'pitch_front', 'roll_front', 'dist_front']
+    orientation_frame = tk.Frame(root, pady=5, padx=5, borderwidth=2, relief='groove')
+    orientation_title = tk.Label(orientation_frame, text="Orientation", borderwidth=2, relief='raised')
+    orientation_title.grid(row=0, column=0, columnspan=2, sticky='we')
+    row = 1
+    for m in orientation_items:
+        title = tk.Label(orientation_frame, text='{}:'.format(m), anchor='e')
+        LABEL[m] = tk.Label(orientation_frame, text="----")
+        title.grid(row=row, column=0, sticky='we')
+        LABEL[m].grid(row=row, column=1)
+        row += 1
+   
+     
+    # Servos
+    servo_frame = tk.Frame(root, pady=5, padx=5, borderwidth=2, relief='groove')
+    servo_title = tk.Label(servo_frame, text="SERVOS", borderwidth=2, relief='raised')
+    servo_title.grid(column=0, row=0, columnspan=4, sticky='we')
+    
+    # create left column labels with titles
+    fl1 = tk.Label(servo_frame, text="FL1")
+    fl1_relief = tk.Label(servo_frame, text="--------", relief="sunken")
+    fl2 = tk.Label(servo_frame, text="FL2")
+    fl2_relief = tk.Label(servo_frame, text="--------", relief="sunken")
+    bl1 = tk.Label(servo_frame, text="BL1")
+    bl1_relief = tk.Label(servo_frame, text="--------", relief="sunken")
+    bl2 = tk.Label(servo_frame, text="BL2")
+    bl2_relief = tk.Label(servo_frame, text="--------", relief="sunken")
+    
+    # create right column labels with titles
+    fr1_relief = tk.Label(servo_frame, text="--------", relief="sunken")
+    fr1 = tk.Label(servo_frame, text="FR1")
+    fr2_relief = tk.Label(servo_frame, text="--------", relief="sunken")
+    fr2 = tk.Label(servo_frame, text="FR2")
+    br1_relief = tk.Label(servo_frame, text="--------", relief="sunken")
+    br1 = tk.Label(servo_frame, text="BR1")
+    br2_relief = tk.Label(servo_frame, text="--------", relief="sunken")
+    br2 = tk.Label(servo_frame, text="BR2")
+    
+    # create Quit button to close the window
+    quit_button = tk.Button(root, text="Quit", command=Quit)
+    
+    # use grid layout to arrange the labels and button
+    fl1.grid(row=1, column=0)
+    fl1_relief.grid(row=1, column=1)
+    fr1_relief.grid(row=1, column=2)
+    fr1.grid(row=1, column=3)
+    fl2.grid(row=2, column=0)
+    fl2_relief.grid(row=2, column=1)
+    fr2_relief.grid(row=2, column=2)
+    fr2.grid(row=2, column=3)
+    bl1.grid(row=3, column=0)
+    bl1_relief.grid(row=3, column=1)
+    br1_relief.grid(row=3, column=2)
+    br1.grid(row=3, column=3)
+    bl2.grid(row=4, column=0)
+    bl2_relief.grid(row=4, column=1)
+    br2_relief.grid(row=4, column=2)
+    br2.grid(row=4, column=3)
+
+    # Keep references to the labels we wish to update
+    LABEL['FL1'] =  fl1_relief
+    LABEL['FL2'] =  fl2_relief
+    LABEL['BL1'] =  bl1_relief
+    LABEL['BL2'] =  bl2_relief
+    LABEL['FR1'] =  fr1_relief
+    LABEL['FR2'] =  fr2_relief
+    LABEL['BR1'] =  br1_relief
+    LABEL['BR2'] =  br2_relief
+    
+    control_frame = create_control_frame(root)
+
+    # ------ Pack -------
+    metadata_frame.grid(row=0, column=0, sticky='we')
+    #battery_frame.grid(row=0, column=1)
+    systeminfo_frame.grid(row=0, column=1)
+    orientation_frame.grid(row=1, column=1, sticky='we')
+    servo_frame.grid(row=1, column=0, sticky='we')
+    control_frame.grid(row=2, column=0, columnspan=2, sticky='we')
+    quit_button.grid(row=3, column=0, columnspan=2)
+
+#------------------------------
+# update_labels
+#------------------------------
+def update_labels():
+    global arduino_state
+    global LABEL
+    global servo2adc_map
+    global metadata_items
+    global orientation_items
+    
+    #print( arduino_state )
+
+    # dummy check that at least some data is in arduino_state
+    if len(arduino_state.keys()) < 2 : return
+    
+    LABEL['battery_voltage'].config( text='{}V'.format(arduino_state['battery_voltage']), width=6, bg='white', fg='green')
+    LABEL['battery_percent'].config( text='({}%)'.format(arduino_state['battery_percent']), width=8, bg='white', fg='blue')
+    for (s,a) in servo2adc_map.items():
+        LABEL[s].config( text=arduino_state[a], width=8, bg='black', fg='yellow') 
+    
+    for m in metadata_items:
+        if m in arduino_state.keys():
+            LABEL[m].config( text=arduino_state[m], width=12, bg='grey', fg='black')
+            
+    for m in orientation_items:
+        if m in arduino_state.keys():
+            LABEL[m].config( text=arduino_state[m], width=10, bg='yellow', fg='blue')
 
 #-----------------------------------
 # calibrate_servos
@@ -154,6 +356,7 @@ def arduino_state_read_thread_pipe():
     global Done
     
     path = "/tmp/robot_status"
+    LABEL['datasource'].config(text=path)
     fifo_fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK )
     if fifo_fd >= 0:
         print('Opened fifo: {}'.format(path))    
@@ -175,9 +378,10 @@ def arduino_state_read_thread_pipe():
                     arduino_state = json.loads(data)
                     if not Done:
                         update_actuators()
-                        last_time = time.time()
-            if (time.time()-last_time) >= 0.5 :
-                print('WARNING: unable to read robot status from pipe!')
+                        # last_time = time.time()
+            if (time.time()-last_time) >= 0.1 :
+                # print('WARNING: unable to read robot status from pipe!')
+                if not Done : update_labels()
                 last_time = time.time()
         except Exception as e:
             print(e)
@@ -237,10 +441,12 @@ else:
 
 
 
-# Start threads
+# Create GUI and run it
+CreateGUI()
 StartAllThreads()
+root.mainloop()
 
 # Calibrate if specified
-calibrate_servos()
+# calibrate_servos()
 
 #while not Done: time.sleep(1)
