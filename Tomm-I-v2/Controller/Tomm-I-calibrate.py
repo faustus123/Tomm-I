@@ -9,14 +9,10 @@
 
 import os
 import select
-#import socket
 import time
-#import serial
 import sys
-#import subprocess
 import threading
 import json
-#import zmq
 from adafruit_servokit import ServoKit
 
 Done = False
@@ -326,7 +322,9 @@ StartAllThreads()
 # Allow threads to start up and for the cycle_time to become primed
 WaitForState()
 
-stand()
+# stand()
+
+testing()
 
 # Calibrate if specified
 #calibrate_servos()

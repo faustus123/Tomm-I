@@ -26,6 +26,8 @@ Done = False
 DataSource = "pipe"  # "zmq", "pipe", "serial"  (zmq and pipe require robot_statsd.py to be running)
 arduino_state = {}
 LABEL = {}
+servo_control = {} # tkinter slider that holders current set value. Key is servo name. Filled in create_control_frame
+servo_enable = {}  # tkinter variable holding state of on/off setting. Key is servo name. Filled in create_control_frame
 servo2adc_map = {
     'BL1':'A0',
     'BL2':'A1',
@@ -69,39 +71,103 @@ for i in range(16): pca.servo[i].set_pulse_width_range(MIN_IMP[i] , MAX_IMP[i])
 #-----------------------------------
 def create_control_frame(parent):
     control_frame = tk.Frame(parent)
-    
+
     # Function to create a row for a servo control
     def create_servo_control(frame, name, row):
-        tk.Label(frame, text=name).grid(row=row, column=0, padx=5, pady=5)
-        
+        global servo_control
+        global servo_enable
+        label = tk.Label(frame, text=name)
+        label.grid(row=row, column=0, padx=5, pady=5)
+
         slider = tk.Scale(frame, from_=500, to=2500, orient=tk.HORIZONTAL)
+        servo_control[name] = slider
         slider.grid(row=row, column=1, columnspan=4, padx=5, pady=5)
-        
+
         btn_dec_10 = tk.Button(frame, text="-10", command=lambda: adjust_servo(slider, -10))
         btn_dec_10.grid(row=row, column=5, padx=2, pady=2)
-        
+
         btn_dec_1 = tk.Button(frame, text="-1", command=lambda: adjust_servo(slider, -1))
         btn_dec_1.grid(row=row, column=6, padx=2, pady=2)
-        
+
         btn_inc_1 = tk.Button(frame, text="+1", command=lambda: adjust_servo(slider, 1))
         btn_inc_1.grid(row=row, column=7, padx=2, pady=2)
-        
+
         btn_inc_10 = tk.Button(frame, text="+10", command=lambda: adjust_servo(slider, 10))
         btn_inc_10.grid(row=row, column=8, padx=2, pady=2)
+
+        toggle_var = tk.IntVar()
+        servo_enable[name] = toggle_var
+        toggle = tk.Checkbutton(frame, text="On/Off", variable=toggle_var, command=lambda: toggle_controls(slider, btn_dec_10, btn_dec_1, btn_inc_1, btn_inc_10, label, toggle_var))
+        toggle.grid(row=row, column=9, padx=5, pady=5)
+
+        # Initialize controls state
+        toggle_controls(slider, btn_dec_10, btn_dec_1, btn_inc_1, btn_inc_10, label, toggle_var)
 
     # Function to adjust the servo value
     def adjust_servo(slider, delta):
         new_value = slider.get() + delta
         new_value = max(500, min(2500, new_value))
         slider.set(new_value)
-    
+
+    # Function to toggle control state
+    def toggle_controls(slider, btn_dec_10, btn_dec_1, btn_inc_1, btn_inc_10, label, toggle_var):
+        state = tk.NORMAL if toggle_var.get() else tk.DISABLED
+        color = "black" if toggle_var.get() else "grey"
+        slider.config(state=state)
+        btn_dec_10.config(state=state)
+        btn_dec_1.config(state=state)
+        btn_inc_1.config(state=state)
+        btn_inc_10.config(state=state)
+        label.config(foreground=color)
+
     # Servo motor names
     servos = ["FL1", "FL2", "FR1", "FR2", "BL1", "BL2", "BR1", "BR2"]
-    
+
+    # Create buttons for Resting, Stand, All On, All Off
+    button_frame = tk.Frame(control_frame)
+    button_frame.grid(row=0, column=0, columnspan=10, pady=10)
+
+    tk.Button(button_frame, text="Rest Pos.", command=resting).grid(row=0, column=0, padx=5)
+    tk.Button(button_frame, text="Stand", command=stand).grid(row=0, column=1, padx=5)
+    tk.Button(button_frame, text="All On", command=lambda: set_all_on_off(True)).grid(row=0, column=2, padx=5)
+    tk.Button(button_frame, text="All Off", command=lambda: set_all_on_off(False)).grid(row=0, column=3, padx=5)
+
+    # Create servo controls
     for idx, servo in enumerate(servos):
-        create_servo_control(control_frame, servo, idx)
+        create_servo_control(control_frame, servo, idx + 1)  # Shift rows down by 1
 
     return control_frame
+
+#-----------------------------------
+# resting
+#-----------------------------------
+def resting():
+    global servo_map
+
+    print("Resting position activated.")
+
+    for name in servo_map.keys():
+        SetServoDegrees( name, 90.0 )    
+    
+    # Implement resting position logic here
+
+#-----------------------------------
+# stand
+#-----------------------------------
+def stand():
+    print("Stand position activated.")
+    # Implement stand position logic here
+
+#-----------------------------------
+# set_all_on_off
+#-----------------------------------
+def set_all_on_off(state):
+    global servo_map
+ 
+    print(f"Setting all servos to {'on' if state else 'off'}.")
+    if state == 'off':
+        for servo,chan in servo_map.items():
+            pca.servo[chan].fraction = None
 
 #-----------------------------------
 # CreateGUI
@@ -117,7 +183,7 @@ def CreateGUI():
     root = tk.Tk()
     
     # set window title
-    root.title("Robot Status")
+    root.title("Robot Control")
     
     # System Info.
     systeminfo_frame = tk.Frame(root)
@@ -262,6 +328,20 @@ def update_labels():
         if m in arduino_state.keys():
             LABEL[m].config( text=arduino_state[m], width=10, bg='yellow', fg='blue')
 
+#-----------------------------------
+# SetServoDegrees
+#-----------------------------------
+def SetServoDegrees(name, angle):
+    global servo_map
+    global pca
+    global servo_control
+    global servo_enable
+
+    if servo_enable[name]:
+        servo = pca.servo[servo_map[name]]
+        servo.angle = angle
+    
+    
 #-----------------------------------
 # calibrate_servos
 #-----------------------------------
