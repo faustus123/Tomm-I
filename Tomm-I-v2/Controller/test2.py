@@ -5,7 +5,8 @@
 import tkinter as tk
 from tkinter import ttk
 from adafruit_servokit import ServoKit
-
+import json
+import os
 
 #----------------- Servos 
 servo2adc_map = {
@@ -40,11 +41,15 @@ MAX_ANG  =[180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180,
 pca = ServoKit(channels=16)
 for i in range(16): pca.servo[i].set_pulse_width_range(MIN_IMP[i] , MAX_IMP[i])
 
+# Calibration file path
+CALIBRATION_FILE = "calibration.json"
 
 class ServoControlApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Tomm-I Controls")
+        
+        self.calibrations = self.load_calibrations()
         
         self.create_title_label()
         self.create_position_buttons()
@@ -91,13 +96,13 @@ class ServoControlApp:
             enable_check.grid(row=0, column=0, padx=5, pady=5)
             
             slider = ttk.Scale(servo_frame, from_=500, to=2500, orient=tk.HORIZONTAL)
-            slider.set(1500)
+            slider.set(self.calibrations.get(servo, 1500))  # Set to calibration value if available
             slider.grid(row=0, column=1, padx=5, pady=5)
             slider.bind("<Motion>", lambda event, s=servo: self.update_slider_value(event, s))
             slider.bind("<ButtonRelease-1>", lambda event, s=servo: self.slider_released(s))
             self.servo_vars[servo] = slider
             
-            value_label = tk.Label(servo_frame, text="1500")
+            value_label = tk.Label(servo_frame, text=str(slider.get()))
             value_label.grid(row=0, column=2, padx=5, pady=5)
             self.servo_labels[servo] = value_label
             
@@ -120,6 +125,7 @@ class ServoControlApp:
         
         tk.Button(frame, text="Enable All", command=self.enable_all_servos).pack(side=tk.LEFT, padx=5)
         tk.Button(frame, text="Disable All", command=self.disable_all_servos).pack(side=tk.LEFT, padx=5)
+        tk.Button(frame, text="Capture Calibration", command=self.CaptureCalibration).pack(side=tk.LEFT, padx=5)
         tk.Button(frame, text="Quit", command=self.root.quit).pack(side=tk.RIGHT, padx=5)
     
     def change_slider_value(self, slider, value_label, delta, servo):
@@ -178,7 +184,9 @@ class ServoControlApp:
 
     def SetServoPWM(self, servo, val):
         print(f"SetServoPWM called with servo: {servo}, value: {val}")
-        angle = (val - 500) * 180.0 / 2000.0
+        # calibration = self.calibrations.get(servo, 1500)
+        # angle = (val - calibration) * 180.0 / 2000.0 + 90
+        angle = (val - 1500) * 180.0 / 2000.0 + 90
         if angle < 0.0: angle = 0.0
         if angle > 180.0: angle = 180.0
         pca.servo[servo_map[servo]].angle = angle
@@ -188,12 +196,26 @@ class ServoControlApp:
         pca.servo[servo_map[servo]].fraction = None
     
     def SetServoAngle(self, servo, angle):
-        pwm_value = int(500 + (angle / 180.0) * 2000)
+        calibration = self.calibrations.get(servo, 1500)
+        pwm_value = int((angle - 90) * 2000.0 / 180.0 + calibration)
         self.servo_vars[servo].set(pwm_value)
         self.servo_labels[servo].config(text=str(pwm_value))
         if self.enable_vars[servo].get():
             self.SetServoPWM(servo, pwm_value)
     
+    def CaptureCalibration(self):
+        print("CaptureCalibration called")
+        self.calibrations = {servo: int(self.servo_vars[servo].get()) for servo in self.servos}
+        with open(CALIBRATION_FILE, 'w') as f:
+            json.dump(self.calibrations, f)
+        print(f"Calibration saved: {self.calibrations}")
+    
+    def load_calibrations(self):
+        if os.path.exists(CALIBRATION_FILE):
+            with open(CALIBRATION_FILE, 'r') as f:
+                return json.load(f)
+        return {}
+
     def SetRestPosition(self):
         print("SetRestPosition called")
         # Add your code to set the rest position for each servo
