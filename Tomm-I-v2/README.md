@@ -88,5 +88,23 @@ this is in the robot_statusd directory and can be installed like this:
 crontab ~/Tomm-I/Tomm-I-v2/robot_statusd/robot_statusd.crontab
 ~~~
 
+### Step 5: VNC screen resolution and RobotStatus GUI
+
+The screen resolution for the VNC desktop is kind of hidden. To change it, connect via VNC
+then go to the raspberry menu and select: 
+
+Preference -> Screen Configuration
+
+This will bring up a Screen Layout Editor which will show the name of th display. On mine it was "NOOP-1".
+
+Layout -> Screens -> NOOP-1 -> Resolution -> 1920x1080
+
+
+It is also useful to link the RobotStatus script to the Desktop so that it can be double-clicked to start. Do this with:
+
+~~~bash
+ln -s ~/Tomm-I/Tomm-I-v2/Monitor/RobotStatus ~/Desktop/
+~~~
+
 Test this by rebooting the rpi and seeing that the display (eventually)
 comes up.
