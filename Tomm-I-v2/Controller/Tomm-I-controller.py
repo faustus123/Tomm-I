@@ -205,6 +205,14 @@ class ServoControlApp:
                 return json.load(f)
         return {}
 
+    def SetServoControlAngle(self, servo, angle):
+        slider = self.servo_vars[servo]
+        value_label = self.servo_labels[servo]
+        slider.set(angle)
+        value_label.config(text=str(int(angle)))
+        if self.enable_vars[servo].get():
+            self.SetServoAngle(servo, int(angle))
+
     def SetRestPosition(self):
         print("SetRestPosition called")
         # Add your code to set the rest position for each servo
@@ -213,9 +221,16 @@ class ServoControlApp:
     
     def SetStandPosition(self):
         print("SetStandPosition called")
-        # Add your code to set the stand position for each servo
-        for servo in self.servos:
-            self.SetServoAngle(servo, 180)  # Example angle for stand position
+        
+        self.SetServoControlAngle('FL1', 130)
+        self.SetServoControlAngle('FR1', 50)
+        self.SetServoControlAngle('BL1', 50)
+        self.SetServoControlAngle('BR1', 130)
+   
+        self.SetServoControlAngle('FL2', 50)
+        self.SetServoControlAngle('FR2', 130)
+        self.SetServoControlAngle('BL2', 130)
+        self.SetServoControlAngle('BR2', 50)    
     
     def SetSitPosition(self):
         print("SetSitPosition called")
