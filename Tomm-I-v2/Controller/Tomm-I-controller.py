@@ -36,8 +36,6 @@ servo_map = {
 # TODO: Make the slider limits and angle to pulse width calculations match these
 MIN_IMP  =[500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500]
 MAX_IMP  =[2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500]
-MIN_ANG  =[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-MAX_ANG  =[180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180]
 pca = ServoKit(channels=16)
 for i in range(16): pca.servo[i].set_pulse_width_range(MIN_IMP[i] , MAX_IMP[i])
 
@@ -95,8 +93,8 @@ class ServoControlApp:
             enable_check = tk.Checkbutton(servo_frame, text=servo, variable=enable_var, command=lambda s=servo: self.toggle_servo(s))
             enable_check.grid(row=0, column=0, padx=5, pady=5)
             
-            slider = ttk.Scale(servo_frame, from_=500, to=2500, orient=tk.HORIZONTAL)
-            slider.set(self.calibrations.get(servo, 1500))  # Set to calibration value if available
+            slider = ttk.Scale(servo_frame, from_=0, to=180, orient=tk.HORIZONTAL)
+            slider.set(90)  # Set to default 90 degrees
             slider.grid(row=0, column=1, padx=5, pady=5)
             slider.bind("<Motion>", lambda event, s=servo: self.update_slider_value(event, s))
             slider.bind("<ButtonRelease-1>", lambda event, s=servo: self.slider_released(s))
@@ -130,12 +128,12 @@ class ServoControlApp:
     
     def change_slider_value(self, slider, value_label, delta, servo):
         value = slider.get() + delta
-        value = max(500, min(2500, value))
+        value = max(0, min(180, value))
         slider.set(value)
         value_label.config(text=str(int(value)))
         print(f"change_slider_value: servo={servo}, enabled={self.enable_vars[servo].get()}")
         if self.enable_vars[servo].get():
-            self.SetServoPWM(servo, int(value))
+            self.SetServoAngle(servo, int(value))
     
     def update_slider_value(self, event, servo):
         value = self.servo_vars[servo].get()
@@ -144,13 +142,13 @@ class ServoControlApp:
     def slider_released(self, servo):
         value = int(self.servo_vars[servo].get())
         if self.enable_vars[servo].get():
-            self.SetServoPWM(servo, value)
+            self.SetServoAngle(servo, value)
     
     def enable_all_servos(self):
         for servo, var in self.enable_vars.items():
             var.set(True)
             value = int(self.servo_vars[servo].get())
-            self.SetServoPWM(servo, value)
+            self.SetServoAngle(servo, value)
         self.update_servo_labels()
     
     def disable_all_servos(self):
@@ -162,7 +160,7 @@ class ServoControlApp:
     def toggle_servo(self, servo):
         if self.enable_vars[servo].get():
             value = int(self.servo_vars[servo].get())
-            self.SetServoPWM(servo, value)
+            self.SetServoAngle(servo, value)
         else:
             self.DisableServo(servo)
         self.update_servo_labels()
@@ -182,30 +180,21 @@ class ServoControlApp:
                     for btn in self.buttons[servo].values():
                         btn.config(fg=color)
 
-    def SetServoPWM(self, servo, val):
-        print(f"SetServoPWM called with servo: {servo}, value: {val}")
-        # calibration = self.calibrations.get(servo, 1500)
-        # angle = (val - calibration) * 180.0 / 2000.0 + 90
-        angle = (val - 1500) * 180.0 / 2000.0 + 90
-        if angle < 0.0: angle = 0.0
-        if angle > 180.0: angle = 180.0
-        pca.servo[servo_map[servo]].angle = angle
+    def SetServoAngle(self, servo, angle):
+        if self.enable_vars[servo].get():
+            print(f"SetServoAngle called with servo: {servo}, angle: {angle}")
+            calibration_offset = self.calibrations.get(servo, 0)
+            actual_angle = angle + calibration_offset
+            actual_angle = max(0, min(180, actual_angle))
+            pca.servo[servo_map[servo]].angle = actual_angle
     
     def DisableServo(self, servo):
         print(f"DisableServo called with servo: {servo}")
         pca.servo[servo_map[servo]].fraction = None
     
-    def SetServoAngle(self, servo, angle):
-        calibration = self.calibrations.get(servo, 1500)
-        pwm_value = int((angle - 90) * 2000.0 / 180.0 + calibration)
-        self.servo_vars[servo].set(pwm_value)
-        self.servo_labels[servo].config(text=str(pwm_value))
-        if self.enable_vars[servo].get():
-            self.SetServoPWM(servo, pwm_value)
-    
     def CaptureCalibration(self):
         print("CaptureCalibration called")
-        self.calibrations = {servo: int(self.servo_vars[servo].get()) for servo in self.servos}
+        self.calibrations = {servo: self.calibrations.get(servo, 0) + int(self.servo_vars[servo].get()) - 90 for servo in self.servos}
         with open(CALIBRATION_FILE, 'w') as f:
             json.dump(self.calibrations, f)
         print(f"Calibration saved: {self.calibrations}")
