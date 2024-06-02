@@ -7,6 +7,7 @@ from tkinter import ttk
 from adafruit_servokit import ServoKit
 import json
 import os
+import time
 
 #----------------- Servos 
 servo2adc_map = {
@@ -181,12 +182,17 @@ class ServoControlApp:
                         btn.config(fg=color)
 
     def SetServoAngle(self, servo, angle):
+        self.servo_vars[servo].set(angle)   # To update GUI if motors disabled
+        self.servo_labels[servo].config(text=f'{angle}') # To update GUI if motors disabled
         if self.enable_vars[servo].get():
             print(f"SetServoAngle called with servo: {servo}, angle: {angle}")
             calibration_offset = self.calibrations.get(servo, 0)
             actual_angle = angle + calibration_offset
             actual_angle = max(0, min(180, actual_angle))
             pca.servo[servo_map[servo]].angle = actual_angle
+    
+    def GetServoAngle(self, servo):
+        return self.servo_vars[servo].get()
     
     def DisableServo(self, servo):
         print(f"DisableServo called with servo: {servo}")
@@ -222,15 +228,41 @@ class ServoControlApp:
     def SetStandPosition(self):
         print("SetStandPosition called")
         
-        self.SetServoControlAngle('FL1', 130)
-        self.SetServoControlAngle('FR1', 50)
-        self.SetServoControlAngle('BL1', 50)
-        self.SetServoControlAngle('BR1', 130)
+        # Get current positions
+        last_set_angle = {}
+        for servo in servo_map.keys():
+            last_set_angle[servo] = self.GetServoAngle(servo)
+        
+        # Target positions
+        end_angle = {}
+        end_angle['FL1'] = 130
+        end_angle['FR1'] = 50
+        end_angle['BL1'] = 50
+        end_angle['BR1'] = 130
    
-        self.SetServoControlAngle('FL2', 50)
-        self.SetServoControlAngle('FR2', 130)
-        self.SetServoControlAngle('BL2', 130)
-        self.SetServoControlAngle('BR2', 50)    
+        end_angle['FL2'] = 50
+        end_angle['FR2'] = 130
+        end_angle['BL2'] = 130
+        end_angle['BR2'] = 50
+        
+        # Loop so the stand is implemented over many small steps
+        max_angle_delta = 1
+        min_angle_delta = -1
+        sleep_seconds = 0.010
+        for i in range(100):
+            Nchanged = 0
+            for servo in servo_map.keys():
+                curr = last_set_angle[servo]
+                if curr == end_angle[servo] : continue
+                delta = end_angle[servo] - curr
+                delta = min(max_angle_delta, max(min_angle_delta, delta))
+                last_set_angle[servo] = curr + delta
+                self.SetServoAngle(servo, last_set_angle[servo])    # Actually update motors (if enabled)
+                Nchanged += 1
+                
+            if Nchanged == 0: break
+            # self.root.update_idletasks()
+            time.sleep( sleep_seconds)
     
     def SetSitPosition(self):
         print("SetSitPosition called")
