@@ -218,20 +218,43 @@ class ServoControlApp:
         value_label.config(text=str(int(angle)))
         if self.enable_vars[servo].get():
             self.SetServoAngle(servo, int(angle))
-
-    def SetRestPosition(self):
-        print("SetRestPosition called")
-        # Add your code to set the rest position for each servo
-        for servo in self.servos:
-            self.SetServoAngle(servo, 90)  # Example angle for rest position
     
-    def SetStandPosition(self):
-        print("SetStandPosition called")
+    def MoveTpPosition(self, target_angle):
+        # target_angle is dictionary with keys being servo names and values the angles to move to
+        print(f"MoveTpPosition calle: {target_angle}")
         
         # Get current positions
         last_set_angle = {}
         for servo in servo_map.keys():
             last_set_angle[servo] = self.GetServoAngle(servo)
+        
+        # Loop so the stand is implemented over many small steps
+        max_angle_delta = 1
+        min_angle_delta = -1
+        sleep_seconds = 0.010
+        for i in range(100):
+            Nchanged = 0
+            for servo in servo_map.keys():
+                curr = last_set_angle[servo]
+                if curr == target_angle[servo] : continue
+                delta = target_angle[servo] - curr
+                delta = min(max_angle_delta, max(min_angle_delta, delta))
+                last_set_angle[servo] = curr + delta
+                self.SetServoAngle(servo, last_set_angle[servo])    # Actually update motors (if enabled)
+                Nchanged += 1
+                
+            if Nchanged == 0: break
+            # self.root.update_idletasks()
+            time.sleep( sleep_seconds)
+            
+    def SetRestPosition(self):
+        print("SetRestPosition called")
+        end_angle = {}
+        for servo in self.servos: end_angle[servo] = 90
+        self.MoveTpPosition(end_angle)
+
+    def SetStandPosition(self):
+        print("SetStandPosition called")
         
         # Target positions
         end_angle = {}
@@ -245,24 +268,7 @@ class ServoControlApp:
         end_angle['BL2'] = 130
         end_angle['BR2'] = 50
         
-        # Loop so the stand is implemented over many small steps
-        max_angle_delta = 1
-        min_angle_delta = -1
-        sleep_seconds = 0.010
-        for i in range(100):
-            Nchanged = 0
-            for servo in servo_map.keys():
-                curr = last_set_angle[servo]
-                if curr == end_angle[servo] : continue
-                delta = end_angle[servo] - curr
-                delta = min(max_angle_delta, max(min_angle_delta, delta))
-                last_set_angle[servo] = curr + delta
-                self.SetServoAngle(servo, last_set_angle[servo])    # Actually update motors (if enabled)
-                Nchanged += 1
-                
-            if Nchanged == 0: break
-            # self.root.update_idletasks()
-            time.sleep( sleep_seconds)
+        self.MoveTpPosition(end_angle)
     
     def SetSitPosition(self):
         print("SetSitPosition called")
