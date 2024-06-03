@@ -55,6 +55,8 @@ class ServoControlApp:
         self.create_servo_controls()
         self.create_control_buttons()
         self.update_servo_labels()  # Ensure initial label colors are set correctly
+        
+        self.SetLaydownPosition()
 
     def create_title_label(self):
         title_label = tk.Label(self.root, text="Tomm-I Controls", font=("Arial", 24))
@@ -68,6 +70,7 @@ class ServoControlApp:
             ("Rest Pos.", self.SetRestPosition),
             ("Stand", self.SetStandPosition),
             ("Sit", self.SetSitPosition),
+            ("Test", self.SetTestPosition),
             ("Laydown", self.SetLaydownPosition)
         ]
         
@@ -219,9 +222,9 @@ class ServoControlApp:
         if self.enable_vars[servo].get():
             self.SetServoAngle(servo, int(angle))
     
-    def MoveTpPosition(self, target_angle):
+    def MoveToPosition(self, target_angle):
         # target_angle is dictionary with keys being servo names and values the angles to move to
-        print(f"MoveTpPosition calle: {target_angle}")
+        print(f"MoveToPosition called: {target_angle}")
         
         # Get current positions
         last_set_angle = {}
@@ -234,7 +237,7 @@ class ServoControlApp:
         sleep_seconds = 0.010
         for i in range(100):
             Nchanged = 0
-            for servo in servo_map.keys():
+            for servo in target_angle.keys():
                 curr = last_set_angle[servo]
                 if curr == target_angle[servo] : continue
                 delta = target_angle[servo] - curr
@@ -251,10 +254,15 @@ class ServoControlApp:
         print("SetRestPosition called")
         end_angle = {}
         for servo in self.servos: end_angle[servo] = 90
-        self.MoveTpPosition(end_angle)
+        self.MoveToPosition(end_angle)
 
     def SetStandPosition(self):
         print("SetStandPosition called")
+        
+        # Laydown first since standing from even the rest position can
+        # cause gears to slip
+        self.SetLaydownPosition()
+        
         # Target positions
         end_angle = {}
         end_angle['FL1'] = 130
@@ -267,13 +275,65 @@ class ServoControlApp:
         end_angle['BL2'] = 130
         end_angle['BR2'] = 50
         
-        self.MoveTpPosition(end_angle)
+        self.MoveToPosition(end_angle)
     
     def SetSitPosition(self):
         print("SetSitPosition called")
-        # Add your code to set the sit position for each servo
-        for servo in self.servos:
-            self.SetServoAngle(servo, 45)  # Example angle for sit position
+        self.SetLaydownPosition()
+        # Target positions
+        end_angle = {}
+        end_angle['FL1'] = 100
+        end_angle['FR1'] = 80
+        # end_angle['BL1'] = 50
+        # end_angle['BR1'] = 130
+   
+        end_angle['FL2'] = 0
+        end_angle['FR2'] = 180
+        end_angle['BL2'] = 70
+        end_angle['BR2'] = 110
+        self.MoveToPosition(end_angle)
+
+    def SetTestPosition(self):
+        print("SetTestPosition called")
+
+        # Stand positions
+        stand_pos = {}
+        stand_pos['FL1'] = 130
+        stand_pos['FR1'] = 50
+        stand_pos['BL1'] = 50
+        stand_pos['BR1'] = 130
+        stand_pos['FL2'] = 50
+        stand_pos['FR2'] = 130
+        stand_pos['BL2'] = 130
+        stand_pos['BR2'] = 50
+        
+        # Front left, Back right up
+        step_pos1 = {}
+        # step_pos1['FL1'] = 150
+        # step_pos1['BR1'] = 150
+        step_pos1['FL2'] = 90
+        step_pos1['BR2'] = 90
+        
+        # Front right, Back left up
+        step_pos2 = {}
+        # step_pos2['FR1'] = 30
+        # step_pos2['BL1'] = 30
+        step_pos2['FR2'] = 90
+        step_pos2['BL2'] = 90
+
+        self.SetStandPosition()
+        
+        for i in range(4):
+            self.MoveToPosition(stand_pos)
+            time.sleep(0.500)
+            self.MoveToPosition(step_pos1)
+            self.MoveToPosition(stand_pos)
+            time.sleep(0.500)
+            self.MoveToPosition(step_pos2)
+            
+        
+        self.MoveToPosition(stand_pos)        
+   
     
     def SetLaydownPosition(self):
         print("SetLaydownPosition called")
@@ -289,7 +349,7 @@ class ServoControlApp:
         end_angle['BL2'] = 30
         end_angle['BR2'] = 150
         
-        self.MoveTpPosition(end_angle)
+        self.MoveToPosition(end_angle)
 if __name__ == "__main__":
     root = tk.Tk()
     app = ServoControlApp(root)
