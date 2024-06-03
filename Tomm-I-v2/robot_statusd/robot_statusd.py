@@ -151,8 +151,11 @@ def onboard_display_update_thread():
             y += 12
 
         # Display image.
-        disp.image(image)
-        disp.show()
+        try:
+            disp.image(image)
+            disp.show()
+        except Exception as e:
+            print(f"Error drawing to onboard display: {e}")
         time.sleep(1.)
         
         # Tell raspberry pi to power down if battery level drops below 5%
