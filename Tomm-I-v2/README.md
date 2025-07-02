@@ -61,7 +61,7 @@ source venv/bin/activate
 pip install platformio
 pip install adafruit-circuitpython-ssd1306 pillow
 pip install adafruit-circuitpython-servokit
-pip install zmq
+pip install zmq pyyaml numpy
 pip install rpi.gpio
 
 # Download the Tomm-I software
