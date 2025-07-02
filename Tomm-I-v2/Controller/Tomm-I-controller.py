@@ -35,10 +35,13 @@ servo_map = {
 
 # Parameters
 # TODO: Make the slider limits and angle to pulse width calculations match these
+MAX_SERVO_ANGLE = 270 # servo can go from 0 to 270 degrees
 MIN_IMP  =[500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500]
 MAX_IMP  =[2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500]
 pca = ServoKit(channels=16)
-for i in range(16): pca.servo[i].set_pulse_width_range(MIN_IMP[i] , MAX_IMP[i])
+for i in range(16):
+    pca.servo[i].set_pulse_width_range(MIN_IMP[i] , MAX_IMP[i])
+    pca.servo[i].actuation_range = MAX_SERVO_ANGLE
 
 # Calibration file path
 CALIBRATION_FILE = "calibration.json"
@@ -97,7 +100,7 @@ class ServoControlApp:
             enable_check = tk.Checkbutton(servo_frame, text=servo, variable=enable_var, command=lambda s=servo: self.toggle_servo(s))
             enable_check.grid(row=0, column=0, padx=5, pady=5)
             
-            slider = ttk.Scale(servo_frame, from_=0, to=180, orient=tk.HORIZONTAL)
+            slider = ttk.Scale(servo_frame, from_=0, to=MAX_SERVO_ANGLE, orient=tk.HORIZONTAL)
             slider.set(90)  # Set to default 90 degrees
             slider.grid(row=0, column=1, padx=5, pady=5)
             slider.bind("<Motion>", lambda event, s=servo: self.update_slider_value(event, s))
@@ -132,7 +135,7 @@ class ServoControlApp:
     
     def change_slider_value(self, slider, value_label, delta, servo):
         value = slider.get() + delta
-        value = max(0, min(180, value))
+        value = max(0, min(MAX_SERVO_ANGLE, value))
         slider.set(value)
         value_label.config(text=str(int(value)))
         print(f"change_slider_value: servo={servo}, enabled={self.enable_vars[servo].get()}")
@@ -191,7 +194,7 @@ class ServoControlApp:
             print(f"SetServoAngle called with servo: {servo}, angle: {angle}")
             calibration_offset = self.calibrations.get(servo, 0)
             actual_angle = angle + calibration_offset
-            actual_angle = max(0, min(180, actual_angle))
+            actual_angle = max(0, min(MAX_SERVO_ANGLE, actual_angle))
             pca.servo[servo_map[servo]].angle = actual_angle
     
     def GetServoAngle(self, servo):
